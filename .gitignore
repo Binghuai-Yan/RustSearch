@@ -1,0 +1,13 @@
+**/target/
+**/bin/
+**/obj/
+**/artifacts/
+dist/
+.tools/
+.vs/
+**/TestResults/
+*.log
+*.user
+*.suo
+.env
+.env.*

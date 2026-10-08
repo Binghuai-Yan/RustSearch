@@ -1,0 +1,108 @@
+<Window x:Class="RustSearch.UI.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:RustSearch.UI.Views.Controls"
+        Title="RustSearch · 设置" Width="780" Height="650" MinWidth="680" MinHeight="550"
+        Icon="/Assets/RustSearch.ico" WindowStartupLocation="CenterOwner" Loaded="Window_Loaded">
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="66" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="24,0">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Command="{Binding TogglePauseCommand}" Padding="14,6" VerticalAlignment="Center" AutomationProperties.Name="{Binding PauseButtonText}"><StackPanel Orientation="Horizontal"><controls:IconParkIcon Icon="setting" Width="14" Height="14" IconBrush="{DynamicResource IconBrush}" Margin="0,0,6,0" /><TextBlock Text="{Binding PauseButtonText}" /></StackPanel></Button>
+                <TextBlock Text="设置" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+            </DockPanel>
+        </Border>
+        <TabControl Grid.Row="1" Margin="20,16,20,0" BorderThickness="0">
+            <TabItem Header="索引文件夹">
+                <Grid Margin="4,18,4,8">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <DockPanel Margin="0,0,0,14">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" ToolTip="刷新统计" AutomationProperties.Name="刷新统计" Command="{Binding RefreshCommand}"><controls:IconParkIcon Icon="refresh" IconBrush="{DynamicResource IconBrush}" /></Button>
+                        <TextBlock Text="{Binding Statistics}" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" />
+                    </DockPanel>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding Roots}" SelectedItem="{Binding SelectedRoot}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Background="{DynamicResource WindowBrush}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="RootBorder" Background="Transparent" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,4"><ContentPresenter /></Border><ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource SelectionBrush}" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="8,12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="26" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <controls:IconParkIcon Icon="folder" IconBrush="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Path}" TextWrapping="Wrap" ToolTip="{Binding Path}" Margin="0,0,16,0" />
+                                    <TextBlock Grid.Column="2" Text="{Binding TotalDocs, StringFormat={}{0:N0} 个文档}" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <WrapPanel Grid.Row="2" Margin="0,16,0,12" ItemHeight="38">
+                        <Button Style="{StaticResource PrimaryButton}" Command="{Binding AddRootCommand}" MinWidth="116" Margin="0,0,10,8"><StackPanel Orientation="Horizontal"><controls:IconParkIcon Icon="folder" Width="15" Height="15" IconBrush="White" Margin="0,0,6,0" /><TextBlock Text="添加文件夹" /></StackPanel></Button>
+                        <Button Command="{Binding RemoveRootCommand}" MinWidth="82" Padding="16,8" Margin="0,0,10,8"><StackPanel Orientation="Horizontal"><controls:IconParkIcon Icon="close" Width="14" Height="14" IconBrush="{DynamicResource IconBrush}" Margin="0,0,6,0" /><TextBlock Text="移除" /></StackPanel></Button>
+                        <Button Command="{Binding RebuildRootCommand}" MinWidth="104" Padding="16,8" Margin="0,0,10,8"><StackPanel Orientation="Horizontal"><controls:IconParkIcon Icon="refresh" Width="14" Height="14" IconBrush="{DynamicResource IconBrush}" Margin="0,0,6,0" /><TextBlock Text="重建索引" /></StackPanel></Button>
+                    </WrapPanel>
+                    <ProgressBar Grid.Row="3" Style="{x:Null}" Height="3" IsIndeterminate="True" Foreground="{DynamicResource AccentBrush}" Visibility="{Binding IsBusy, Converter={StaticResource BoolVisibility}}" />
+                </Grid>
+            </TabItem>
+            <TabItem Header="文件与词典">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="4,20,12,16">
+                        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <TextBox Text="{Binding MaxFileSizeMb, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True}" Width="66" Padding="6,4" HorizontalContentAlignment="Right" />
+                                <TextBlock Text="MB" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}" />
+                            </StackPanel>
+                            <TextBlock Text="单文件大小上限" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <Slider Grid.Row="1" Value="{Binding MaxFileSizeMb}" Minimum="1" Maximum="2000" TickFrequency="10" IsSnapToTickEnabled="False" Margin="0,14,0,24" AutomationProperties.Name="单文件大小上限" />
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="跳过的目录名" FontWeight="SemiBold" Margin="0,0,0,10" />
+                                <TextBox Text="{Binding SkipDirectories, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" Height="220" Padding="10" FontSize="12" AutomationProperties.Name="跳过的目录名" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="自定义分词词典" FontWeight="SemiBold" Margin="0,0,0,10" />
+                                <TextBox Text="{Binding UserDictionary, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" Height="220" Padding="10" FontSize="12" AutomationProperties.Name="自定义分词词典" />
+                            </StackPanel>
+                        </Grid>
+                        <StackPanel Grid.Row="3" Margin="0,20,0,0">
+                            <CheckBox Content="关闭主窗口时最小化到系统托盘" IsChecked="{Binding CloseToTray}" AutomationProperties.Name="关闭主窗口时最小化到系统托盘" />
+                            <Button Command="{Binding SaveCommand}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" Margin="0,14,0,0"><StackPanel Orientation="Horizontal"><controls:IconParkIcon Icon="copy" Width="14" Height="14" IconBrush="White" Margin="0,0,6,0" /><TextBlock Text="保存设置" /></StackPanel></Button>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem Header="关于">
+                <StackPanel Margin="4,26,4,16">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/Assets/RustSearch.png" Width="46" Height="46" Margin="0,0,14,0" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="RustSearch" FontFamily="Segoe UI" FontSize="24" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding Version, StringFormat=版本 {0}}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBlock Text="本地全文搜索" FontSize="15" Margin="0,28,0,0" />
+                    <TextBlock Text="所有文件和索引均保存在此电脑。" Foreground="{DynamicResource TextMutedBrush}" Margin="0,10,0,28" />
+                    <TextBlock Text="数据目录" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <TextBlock Text="{Binding DataDirectory}" TextWrapping="Wrap" Foreground="{DynamicResource TextMutedBrush}" />
+                    <WrapPanel Margin="0,14,0,0">
+                        <Button Command="{Binding OpenDataDirectoryCommand}" MinWidth="120" Padding="14,7" Margin="0,0,10,8"><StackPanel Orientation="Horizontal"><controls:IconParkIcon Icon="folder" Width="14" Height="14" IconBrush="{DynamicResource IconBrush}" Margin="0,0,6,0" /><TextBlock Text="打开数据目录" /></StackPanel></Button>
+                        <Button Command="{Binding ChangeDataDirectoryCommand}" MinWidth="120" Padding="14,7" Margin="0,0,10,8"><StackPanel Orientation="Horizontal"><controls:IconParkIcon Icon="folder" Width="14" Height="14" IconBrush="{DynamicResource AccentBrush}" Margin="0,0,6,0" /><TextBlock Text="更换数据目录" /></StackPanel></Button>
+                    </WrapPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+                        <TextBlock Text="界面主题" VerticalAlignment="Center" Margin="0,0,12,0" />
+                        <ComboBox ItemsSource="{Binding ThemeOptions}" SelectedItem="{Binding SelectedTheme, UpdateSourceTrigger=PropertyChanged}" Width="110" AutomationProperties.Name="界面主题" />
+                    </StackPanel>
+                    <TextBlock Text="Rust · Tantivy · WPF" FontFamily="Segoe UI" FontSize="12" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,32,0,0" />
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+        <Border Grid.Row="2" Background="{DynamicResource PanelBrush}" Padding="24,12" MinHeight="46">
+            <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+        </Border>
+    </Grid>
+</Window>

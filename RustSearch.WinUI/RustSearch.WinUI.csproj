@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>RustSearch.WinUI</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <WindowsPackageType>None</WindowsPackageType>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <UseWinUI>true</UseWinUI>
+    <ApplicationIcon>..\RustSearch.UI\Assets\RustSearch.ico</ApplicationIcon>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+    <Content Include="Assets\IconPark\**\*.svg" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Update="Assets\IconPark\LICENSE;Assets\IconPark\README.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\RustSearch.UI\Assets\RustSearch.ico" Link="Assets\RustSearch.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\RustSearch.UI\Assets\RustSearch.png" Link="Assets\RustSearch.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.4.0" />
+    <Compile Include="..\RustSearch.UI\Services\BackendProcess.cs" Link="Services\BackendProcess.cs" />
+    <Compile Include="..\RustSearch.UI\Services\JsonRpcClient.cs" Link="Services\JsonRpcClient.cs" />
+    <Compile Include="..\RustSearch.UI\Services\BackendModels.cs" Link="Services\BackendModels.cs" />
+    <Compile Include="..\RustSearch.UI\Services\AppPaths.cs" Link="Services\AppPaths.cs" />
+    <Compile Include="..\RustSearch.UI\Services\DataDirectoryMigration.cs" Link="Services\DataDirectoryMigration.cs" />
+    <Compile Include="..\RustSearch.UI\Services\UserPreferences.cs" Link="Services\UserPreferences.cs" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,84 @@
+name: Windows build and release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RUSTSEARCH_DEPENDENCY_CACHE_DIR: ${{ runner.temp }}\RustSearch-Dependencies
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+          components: rustfmt, clippy
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}\RustSearch-Dependencies\cargo\registry
+            ${{ runner.temp }}\RustSearch-Dependencies\cargo\git
+            ${{ runner.temp }}\RustSearch-Dependencies\nuget\packages
+          key: windows-deps-${{ hashFiles('rustsearch-backend/Cargo.lock', '**/*.csproj') }}
+
+      - name: Check Rust formatting
+        run: cargo fmt --manifest-path rustsearch-backend/Cargo.toml --all -- --check
+
+      - name: Check Rust lints
+        run: |
+          . ./scripts/use-dependency-cache.ps1
+          cargo clippy --manifest-path rustsearch-backend/Cargo.toml --all-targets --locked -- -D warnings
+
+      - name: Install Inno Setup
+        run: |
+          if (-not (Test-Path 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe') -and
+              -not (Test-Path 'C:\Program Files\Inno Setup 6\ISCC.exe')) {
+            choco install innosetup --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation failed' }
+          }
+
+      - name: Build portable ZIP and installer
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $tagVersion = $env:GITHUB_REF_NAME -replace '^v', ''
+            if ($tagVersion -ne $version) { throw "Tag version $tagVersion does not match VERSION $version" }
+          }
+          ./build.ps1 -Version $version -SkipUITests
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: RustSearch-win-x64
+          path: |
+            dist/RustSearch-*-win-x64.zip
+            dist/RustSearch-*-win-x64-setup.exe
+          if-no-files-found: error
+
+      - name: Publish tagged release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/RustSearch-*-win-x64.zip
+            dist/RustSearch-*-win-x64-setup.exe
+          fail_on_unmatched_files: true
+          generate_release_notes: true
