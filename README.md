@@ -5,23 +5,39 @@
 
 RustSearch 是完全本地运行的 Windows 全文搜索工具。WinUI 3 前端负责搜索、预览和设置；Rust sidecar 使用 Tantivy 建立索引，通过 stdin/stdout JSON Lines 与前端通信。文档和索引不会上传到服务器，程序运行时不需要联网。
 
-![RustSearch 搜索界面](docs/screenshots/main-light.png)
-
-## 下载与使用
+## 下载
 
 从 [Releases](https://github.com/Binghuai-Yan/RustSearch/releases/latest) 下载 Windows x64 版本：
 
 - `RustSearch-<版本>-win-x64-setup.exe`：安装版，提供开始菜单、可选桌面快捷方式和卸载入口。
 - `RustSearch-<版本>-win-x64.zip`：便携版，解压后运行 `RustSearch.WinUI.exe`。请保留完整目录，不能只复制 EXE。
 
-打开应用后，在设置的“索引文件夹”中添加目录，等待索引完成，再输入关键词搜索。点击结果可查看正文预览；双击打开文件，右键可打开所在文件夹或复制路径。Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台；发布包包含 .NET 和 Windows App SDK 运行时。
+Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。发布包包含 .NET 和 Windows App SDK 运行时。
+
+## 首次使用
+
+1. 启动后，点击主界面中间的“添加索引文件夹”，或点击左侧的文件夹加号图标。第一次打开时列表为空是正常的。
+
+   ![首次启动，添加索引文件夹入口](docs/screenshots/first-run.png)
+
+2. 在“索引文件夹”设置中，输入文件夹的完整路径，或点击路径框右侧的文件夹图标选择目录，再点击“添加”。建议先选一个常用文档目录；文件较多时可在这里看已索引文档数和进度。状态显示“索引已就绪”后即可搜索。需要更多目录时可以继续添加，不必等当前目录索引结束。移除目录只删除其搜索索引，不删除源文件。
+
+   ![索引文件夹设置与索引状态](docs/screenshots/index-folders.png)
+
+3. 回到搜索页，在顶部输入文件名或正文关键词，结果会自动更新，无需按回车。可用下拉框筛选类型和排序；单击结果在右侧预览并高亮关键词，双击结果用系统默认程序打开。结果右键菜单和预览上方图标可打开文件、打开所在文件夹或复制路径。拖动结果与预览之间的竖线可以调整两侧宽度；底部分页用于查看更多结果。
+
+   ![搜索结果、关键词高亮与文件预览](docs/screenshots/main-light.png)
+
+4. 左下角齿轮打开设置。“外观与行为”可切换浅色/深色主题和关闭窗口后的行为；“数据存储”可迁移现有索引与设置。切换数据目录时选择目标文件夹，保留勾选的“迁移当前索引和设置”，再点击“应用更改”。迁移完成后原目录仍保留作为备份。
+
+   ![数据目录迁移设置](docs/screenshots/data-storage.png)
 
 ## 功能
 
 - 中文和英文全文搜索，300 ms 防抖；文件类型筛选、相关度/时间/大小排序、分页及最近搜索历史。
 - 文件名、搜索片段和正文预览高亮；可拖动分隔条调整结果与预览宽度。
 - 添加、移除、重建索引目录，暂停/恢复索引，文件变化自动更新。后台索引期间保留当前搜索结果和选中项，手动刷新后展示新结果。
-- 浅色与深色主题、可选托盘驻留、自定义分词词典、忽略目录和最大文件大小设置。
+- 浅色与深色主题、可选托盘驻留、自定义分词词典、忽略目录和最大文件大小设置。深色界面见[截图](docs/screenshots/main-dark.png)。
 - 可迁移索引和设置到新的数据文件夹；原目录保留作为备份。
 
 支持纯文本、Markdown、常见代码和配置文件、CSV、HTML、PDF、DOCX、XLSX/XLS/XLSB、PPTX、EPUB。文本编码包括 UTF-8、GBK/GB18030 和 UTF-16。默认跳过隐藏目录、`.gitignore` 忽略项、常见依赖/构建目录、Office 临时文件及超过 200 MB 的文件。扫描版 PDF 暂不支持 OCR，旧版 `.doc` 和 `.ppt` 暂不支持。
@@ -68,4 +84,50 @@ GitHub Actions 在 `main` 推送、拉取请求及手动触发时构建并上传
 - `rustsearch-backend/`：文件提取、Tantivy 索引、SQLite 元数据、监听及 JSON Lines 协议。
 - `installer/`、`build.ps1`：Inno Setup 安装包与发行构建。
 
-项目代码采用 [MIT License](LICENSE)。随程序分发的 IconPark 图标属于字节跳动的 `@icon-park/svg`，采用 Apache-2.0，许可文本见 [IconPark LICENSE](RustSearch.WinUI/Assets/IconPark/LICENSE)。
+## 开源项目与许可
+
+RustSearch 自有代码采用 [MIT License](LICENSE)。第三方组件保留各自的许可；下表列出项目直接使用的开源项目和构建工具。[完整第三方依赖清单](THIRD_PARTY_NOTICES.md)按锁定版本列出 285 个 Cargo 包和 20 个 NuGet 包，包括传递依赖、项目链接及其声明的许可。Windows App SDK 等 NuGet 二进制包的分发许可可能与源码许可不同，清单会标明包内许可文件。
+
+| 前端、资源与发行工具 | 用途 | 许可 |
+| --- | --- | --- |
+| [Rust 工具链](https://github.com/rust-lang/rust) | 后端语言与构建工具 | MIT OR Apache-2.0 |
+| [Windows App SDK / WinUI 3](https://github.com/microsoft/WindowsAppSDK) | 主界面 | 源码 MIT；NuGet 包另附 Microsoft 许可 |
+| [.NET / WPF](https://github.com/dotnet/wpf) | .NET 8 运行时、备用 WPF 界面 | 源码 MIT；运行时包依其分发许可 |
+| [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) | WPF MVVM | MIT |
+| [HandyControl](https://github.com/HandyOrg/HandyControl) | WPF 控件 | MIT |
+| [Microsoft.Extensions.DependencyInjection](https://github.com/dotnet/runtime) | WPF 依赖注入 | MIT |
+| [IconPark `@icon-park/svg`](https://github.com/bytedance/IconPark) | 随包提供的界面图标 | Apache-2.0；[原始许可文本](RustSearch.WinUI/Assets/IconPark/LICENSE) |
+| [SQLite](https://www.sqlite.org/) | 元数据库，由 rusqlite 捆绑 | 公有领域 |
+| [Inno Setup](https://jrsoftware.org/isinfo.php) | Windows 安装程序 | Inno Setup 自有许可 |
+
+Rust 后端的直接 crate：
+
+| 项目 | 用途 | 声明的许可 |
+| --- | --- | --- |
+| [Tantivy](https://github.com/quickwit-oss/tantivy) | 全文索引 | MIT |
+| [tantivy-jieba](https://github.com/jiegec/tantivy-jieba) | Tantivy 中文分词 | MIT |
+| [jieba-rs](https://github.com/messense/jieba-rs) | 中文词典与分词 | MIT |
+| [rusqlite](https://github.com/rusqlite/rusqlite) | SQLite 接口 | MIT |
+| [notify](https://github.com/notify-rs/notify) | 文件系统监听 | CC0-1.0 |
+| [ignore](https://github.com/BurntSushi/ripgrep/tree/master/crates/ignore) | 目录遍历与忽略规则 | Unlicense OR MIT |
+| [rayon](https://github.com/rayon-rs/rayon) | 并行处理 | MIT OR Apache-2.0 |
+| [crossbeam-channel](https://github.com/crossbeam-rs/crossbeam) | 工作队列 | MIT OR Apache-2.0 |
+| [calamine](https://github.com/tafia/calamine) | Excel 提取 | MIT |
+| [lopdf](https://github.com/J-F-Liu/lopdf) | PDF 读取 | MIT |
+| [pdf-extract](https://github.com/jrmuizel/pdf-extract) | PDF 文本提取 | MIT |
+| [zip](https://github.com/zip-rs/zip) | Office/EPUB 容器 | MIT |
+| [quick-xml](https://github.com/tafia/quick-xml) | Office XML 读取 | MIT |
+| [scraper](https://github.com/causal-agent/scraper) | HTML 提取 | ISC |
+| [encoding_rs](https://github.com/hsivonen/encoding_rs) | 文本解码 | (Apache-2.0 OR MIT) AND BSD-3-Clause |
+| [chardetng](https://github.com/hsivonen/chardetng) | 文本编码检测 | Apache-2.0 OR MIT |
+| [zstd](https://github.com/gyscos/zstd-rs) | 文本缓存压缩 | MIT |
+| [regex](https://github.com/rust-lang/regex) | 查询与提取匹配 | MIT OR Apache-2.0 |
+| [chrono](https://github.com/chronotope/chrono) | 日期解析 | MIT OR Apache-2.0 |
+| [serde](https://github.com/serde-rs/serde) | 数据序列化 | MIT OR Apache-2.0 |
+| [serde_json](https://github.com/serde-rs/json) | JSON Lines 协议 | MIT OR Apache-2.0 |
+| [anyhow](https://github.com/dtolnay/anyhow) | 错误传播 | MIT OR Apache-2.0 |
+| [tracing](https://github.com/tokio-rs/tracing) | 诊断日志 | MIT |
+| [tracing-subscriber](https://github.com/tokio-rs/tracing) | 日志输出 | MIT |
+| [tempfile](https://github.com/Stebalien/tempfile) | 临时文件 | MIT OR Apache-2.0 |
+
+CI 使用的 [checkout](https://github.com/actions/checkout)、[cache](https://github.com/actions/cache)、[setup-dotnet](https://github.com/actions/setup-dotnet)、[upload-artifact](https://github.com/actions/upload-artifact)、[rust-toolchain](https://github.com/dtolnay/rust-toolchain) 和 [action-gh-release](https://github.com/softprops/action-gh-release) 均采用 MIT。工作流固定到声明使用 Node.js 24 的 action 版本。

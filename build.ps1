@@ -57,9 +57,11 @@ try {
     Copy-Item -LiteralPath (Join-Path $backend 'target\release\rustsearch-backend.exe') -Destination $backendOutput -Force
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.md') -Destination $output -Force
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LICENSE') -Destination $output -Force
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'THIRD_PARTY_NOTICES.md') -Destination $output -Force
     New-Item -ItemType Directory -Path (Join-Path $output 'docs') -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\verification.md') -Destination (Join-Path $output 'docs') -Force
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\fluent-redesign.md') -Destination (Join-Path $output 'docs') -Force
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\screenshots') -Destination (Join-Path $output 'docs') -Recurse -Force
     $manifest = [ordered]@{ name = 'RustSearch'; version = $Version; frontend = if ($useWinUI) { 'WinUI 3' } else { 'WPF' }; runtime = 'win-x64'; self_contained = ($framework -eq 'true'); built_at = [DateTimeOffset]::UtcNow.ToString('O') }
     $manifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'release.json') -Encoding utf8
     if ($useWinUI -and -not $SkipTests -and -not $SkipUITests) {
