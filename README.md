@@ -12,6 +12,10 @@ RustSearch 是完全本地运行的 Windows 全文搜索工具。WinUI 3 前端�
 - `RustSearch-<版本>-win-x64-setup.exe`：安装版，提供开始菜单、可选桌面快捷方式和卸载入口。
 - `RustSearch-<版本>-win-x64.zip`：便携版，解压后运行 `RustSearch.WinUI.exe`。请保留完整目录，不能只复制 EXE。
 
+微信输入法在当前 WinUI 3 文本框中可能只显示拼音预编辑文字而不弹出候选窗。这是 WinUI 对旧式第三方输入法辅助界面的兼容问题；普通 WinUI 文本框也受影响。安装版可从开始菜单打开 **RustSearch 输入法兼容界面**，便携版运行 `Compat\RustSearch.UI.exe`。兼容界面使用 WPF，微信输入法候选窗可正常显示，搜索与索引数据和 WinUI 版共用。切换界面前请完全退出另一个版本，避免同时打开同一索引。
+
+![输入法兼容界面显示微信输入法候选词](docs/screenshots/wechat-ime-compat.png)
+
 Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。发布包包含 .NET 和 Windows App SDK 运行时。
 
 ## 首次使用
@@ -70,7 +74,7 @@ Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。发
 ./build.ps1
 ```
 
-脚本运行 Rust 测试，发布自包含 WinUI 程序，执行桌面回归测试，并生成 `dist/` 下的便携 ZIP 和安装 EXE。非交互环境使用 `./build.ps1 -SkipUITests`，仍运行 Rust 测试；只生成 ZIP 可加 `-SkipInstaller`。完整安装、启动、卸载验收可用 `./build.ps1 -TestInstaller`。
+脚本运行 Rust 测试，发布自包含 WinUI 主程序和 WPF 输入法兼容界面，执行桌面回归测试，并生成 `dist/` 下的便携 ZIP 和安装 EXE。非交互环境使用 `./build.ps1 -SkipUITests`，仍运行 Rust 测试；只生成 ZIP 可加 `-SkipInstaller`。完整安装、启动、卸载验收可用 `./build.ps1 -TestInstaller`。
 
 依赖缓存默认位于可用的 `E:\cache\RustSearch-Dependencies`，否则位于用户本地应用数据目录；也可用 `RUSTSEARCH_DEPENDENCY_CACHE_DIR` 指定。它与应用索引数据分离。单独执行 Cargo 或 dotnet 命令前，可运行 `. ./scripts/use-dependency-cache.ps1` 采用相同缓存路径。
 
@@ -80,7 +84,7 @@ GitHub Actions 在 `main` 推送、拉取请求及手动触发时构建并上传
 
 ## 架构与许可
 
-- `RustSearch.WinUI/`：WinUI 3 前端；`RustSearch.UI/` 保留 WPF 前端及两者共用的服务代码。
+- `RustSearch.WinUI/`：默认 WinUI 3 前端；`RustSearch.UI/`：微信输入法兼容前端及两者共用的服务代码。
 - `rustsearch-backend/`：文件提取、Tantivy 索引、SQLite 元数据、监听及 JSON Lines 协议。
 - `installer/`、`build.ps1`：Inno Setup 安装包与发行构建。
 

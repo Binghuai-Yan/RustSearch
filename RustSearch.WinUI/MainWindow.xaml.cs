@@ -35,12 +35,24 @@ public sealed partial class MainWindow : Window
     private bool _refreshForced;
     private bool _refreshInProgress;
     private bool _indexingActive;
+    private bool _isComposingQuery;
     private DateTime _lastIndexRefreshUtc = DateTime.MinValue;
     private const int PageSize = 50;
 
     public MainWindow()
     {
         InitializeComponent();
+        QueryBox.TextCompositionStarted += (_, _) =>
+        {
+            _isComposingQuery = true;
+            _searchCancellation?.Cancel();
+        };
+        QueryBox.TextCompositionEnded += async (_, _) =>
+        {
+            _isComposingQuery = false;
+            if (_preview.Length > 0) HighlightText.Preview(PreviewText, _preview, QueryBox.Text);
+            if (_initialized && !_closing) await SearchAsync(true, true);
+        };
         Title = "RustSearch";
         _chrome = new FluentWindowChrome(this, Root, TitleDragRegion, CaptionInset);
         Root.ActualThemeChanged += (_, _) => UpdateThemeIcon();
@@ -158,13 +170,14 @@ public sealed partial class MainWindow : Window
     private async void QueryBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         if (ClearButton is not null) ClearButton.Visibility = QueryBox.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
-        if (!_initialized || _closing) return;
+        if (!_initialized || _closing || _isComposingQuery) return;
         if (_preview.Length > 0) HighlightText.Preview(PreviewText, _preview, QueryBox.Text);
         await SearchAsync(true, true);
     }
 
     private async void QueryBox_KeyDown(object sender, KeyRoutedEventArgs e)
     {
+        if (_isComposingQuery) return;
         if (e.Key == Windows.System.VirtualKey.Enter) { e.Handled = true; await SearchAsync(true); }
         else if (e.Key == Windows.System.VirtualKey.Escape) QueryBox.Text = "";
     }
@@ -176,7 +189,7 @@ public sealed partial class MainWindow : Window
 
     private async Task SearchAsync(bool resetPage, bool debounce = false)
     {
-        if (_closing || _settings?.IsChangingDataDirectory == true) return;
+        if (_closing || _isComposingQuery || _settings?.IsChangingDataDirectory == true) return;
         _searchCancellation?.Cancel();
         var cancellation = new CancellationTokenSource();
         _searchCancellation = cancellation;
@@ -184,6 +197,7 @@ public sealed partial class MainWindow : Window
         try
         {
             if (debounce) await Task.Delay(300, cancellation.Token);
+            if (_isComposingQuery) return;
             if (!_backend.IsConnected) return;
             SearchActivity.IsActive = true;
             SearchActivity.Visibility = Visibility.Visible;

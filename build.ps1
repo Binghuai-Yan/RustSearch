@@ -55,6 +55,17 @@ try {
     $backendOutput = Join-Path $output 'Backend'
     New-Item -ItemType Directory -Path $backendOutput -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $backend 'target\release\rustsearch-backend.exe') -Destination $backendOutput -Force
+    if ($useWinUI) {
+        $compatOutput = Join-Path $output 'Compat'
+        & dotnet publish (Join-Path $PSScriptRoot 'RustSearch.UI\RustSearch.UI.csproj') -c Release -r win-x64 --self-contained true "-p:Version=$Version" -o $compatOutput
+        if ($LASTEXITCODE -ne 0) { throw 'WPF compatibility frontend publish failed' }
+        if (-not (Test-Path -LiteralPath (Join-Path $compatOutput 'RustSearch.UI.exe') -PathType Leaf)) {
+            throw 'WPF compatibility frontend executable is missing'
+        }
+        $compatBackend = Join-Path $compatOutput 'Backend'
+        New-Item -ItemType Directory -Path $compatBackend -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $backendOutput 'rustsearch-backend.exe') -Destination $compatBackend -Force
+    }
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.md') -Destination $output -Force
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LICENSE') -Destination $output -Force
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'THIRD_PARTY_NOTICES.md') -Destination $output -Force
@@ -68,6 +79,7 @@ try {
         & (Join-Path $PSScriptRoot 'scripts\test-winui.ps1') -Executable (Join-Path $output 'RustSearch.WinUI.exe')
         & (Join-Path $PSScriptRoot 'scripts\test-winui-features.ps1') -Executable (Join-Path $output 'RustSearch.WinUI.exe')
         & (Join-Path $PSScriptRoot 'scripts\test-winui-visual.ps1') -Executable (Join-Path $output 'RustSearch.WinUI.exe')
+        & (Join-Path $PSScriptRoot 'scripts\test-ui.ps1') -Executable (Join-Path $compatOutput 'RustSearch.UI.exe') -Packaged
     }
     Compress-Archive -Path "$output\*" -DestinationPath (Join-Path $PSScriptRoot "dist\RustSearch-$Version-win-x64.zip") -Force
     $uiExe = if ($useWinUI) { 'RustSearch.WinUI.exe' } else { 'RustSearch.UI.exe' }

@@ -1,5 +1,5 @@
 param(
-    [string]$Installer = (Join-Path $PSScriptRoot '..\dist\RustSearch-0.1.3-win-x64-setup.exe'),
+    [string]$Installer = (Join-Path $PSScriptRoot '..\dist\RustSearch-0.1.4-win-x64-setup.exe'),
     [string]$Published = (Join-Path $PSScriptRoot '..\dist\RustSearch')
 )
 
@@ -31,12 +31,14 @@ function Run-Silent([string]$Executable, [string]$Arguments) {
 
 function Install-TestBuild([string]$LogName) {
     Run-Silent $installerPath "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /NOICONS /DIR=`"$installDirectory`" /LOG=`"$(Join-Path $testRoot $LogName)`""
-    foreach ($relative in @('RustSearch.WinUI.exe', 'RustSearch.WinUI.pri', 'Backend\rustsearch-backend.exe', 'unins000.exe')) {
+    foreach ($relative in @('RustSearch.WinUI.exe', 'RustSearch.WinUI.pri', 'Backend\rustsearch-backend.exe',
+            'Compat\RustSearch.UI.exe', 'Compat\Backend\rustsearch-backend.exe', 'unins000.exe')) {
         if (-not (Test-Path -LiteralPath (Join-Path $installDirectory $relative) -PathType Leaf)) {
             throw "Installed file is missing: $relative"
         }
     }
-    foreach ($relative in @('RustSearch.WinUI.exe', 'RustSearch.WinUI.pri', 'Backend\rustsearch-backend.exe')) {
+    foreach ($relative in @('RustSearch.WinUI.exe', 'RustSearch.WinUI.pri', 'Backend\rustsearch-backend.exe',
+            'Compat\RustSearch.UI.exe', 'Compat\Backend\rustsearch-backend.exe')) {
         $expected = (Get-FileHash -LiteralPath (Join-Path $publishedPath $relative) -Algorithm SHA256).Hash
         $actual = (Get-FileHash -LiteralPath (Join-Path $installDirectory $relative) -Algorithm SHA256).Hash
         if ($expected -ne $actual) { throw "Installed file differs from the portable release: $relative" }
@@ -55,7 +57,8 @@ function Uninstall-TestBuild([string]$LogName, [switch]$DeleteIndex) {
 try {
     Install-TestBuild 'install-preserve.log'
     & (Join-Path $PSScriptRoot 'test-winui.ps1') -Executable (Join-Path $installDirectory 'RustSearch.WinUI.exe')
-    Write-Output 'PASS: installer files match the portable build and the installed app starts with its bundled backend.'
+    & (Join-Path $PSScriptRoot 'test-ui.ps1') -Executable (Join-Path $installDirectory 'Compat\RustSearch.UI.exe') -Packaged
+    Write-Output 'PASS: installer files match the portable build and both frontends start with their bundled backend.'
 
     $env:RUSTSEARCH_DATA_DIR = $dataDirectory
     try {

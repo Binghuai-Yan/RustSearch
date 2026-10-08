@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.1.3"
+  #define AppVersion "0.1.4"
 #endif
 #ifndef AppExeName
   #define AppExeName "RustSearch.WinUI.exe"
@@ -54,6 +54,7 @@ Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 
 [Icons]
 Name: "{group}\RustSearch"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\Assets\RustSearch.ico"
+Name: "{group}\RustSearch 输入法兼容界面"; Filename: "{app}\Compat\RustSearch.UI.exe"; IconFilename: "{app}\Assets\RustSearch.ico"; Check: IsWinUIBuild
 Name: "{autodesktop}\RustSearch"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\Assets\RustSearch.ico"; Tasks: desktopicon
 
 [Run]
@@ -62,6 +63,11 @@ Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,RustSearch}"; F
 [Code]
 var
   DeleteUserIndex: Boolean;
+
+function IsWinUIBuild(): Boolean;
+begin
+  Result := FileExists(ExpandConstant('{app}\Compat\RustSearch.UI.exe'));
+end;
 
 function HasDeleteIndexSwitch(): Boolean;
 var
