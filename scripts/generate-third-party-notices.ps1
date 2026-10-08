@@ -10,8 +10,8 @@ $cargoCommand = Get-Command cargo -ErrorAction SilentlyContinue
 $cargo = if ($cargoCommand) { $cargoCommand.Source } else { Join-Path $env:USERPROFILE '.cargo\bin\cargo.exe' }
 if (-not (Test-Path -LiteralPath $cargo -PathType Leaf)) { throw 'Cargo is required to generate dependency notices.' }
 
-$metadataJson = & $cargo metadata --locked --offline --format-version 1 --manifest-path (Join-Path $root 'rustsearch-backend\Cargo.toml')
-if ($LASTEXITCODE -ne 0) { throw 'Cargo metadata failed. Restore dependencies before generating notices.' }
+$metadataJson = & $cargo metadata --locked --format-version 1 --manifest-path (Join-Path $root 'rustsearch-backend\Cargo.toml')
+if ($LASTEXITCODE -ne 0) { throw 'Cargo metadata failed.' }
 $metadata = $metadataJson | ConvertFrom-Json -Depth 100
 $crates = @($metadata.packages | Where-Object name -ne 'rustsearch-backend' | Sort-Object name, version)
 
