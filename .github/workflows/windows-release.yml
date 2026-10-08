@@ -16,9 +16,6 @@ jobs:
     defaults:
       run:
         shell: pwsh
-    env:
-      RUSTSEARCH_DEPENDENCY_CACHE_DIR: ${{ runner.temp }}\RustSearch-Dependencies
-
     steps:
       - uses: actions/checkout@v4
 
@@ -43,6 +40,8 @@ jobs:
         run: cargo fmt --manifest-path rustsearch-backend/Cargo.toml --all -- --check
 
       - name: Check Rust lints
+        env:
+          RUSTSEARCH_DEPENDENCY_CACHE_DIR: ${{ runner.temp }}\RustSearch-Dependencies
         run: |
           . ./scripts/use-dependency-cache.ps1
           cargo clippy --manifest-path rustsearch-backend/Cargo.toml --all-targets --locked -- -D warnings
@@ -56,6 +55,8 @@ jobs:
           }
 
       - name: Build portable ZIP and installer
+        env:
+          RUSTSEARCH_DEPENDENCY_CACHE_DIR: ${{ runner.temp }}\RustSearch-Dependencies
         run: |
           $version = (Get-Content VERSION -Raw).Trim()
           if ($env:GITHUB_REF_TYPE -eq 'tag') {
