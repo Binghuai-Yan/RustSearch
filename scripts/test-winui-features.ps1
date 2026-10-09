@@ -489,6 +489,23 @@ try {
         $config.max_file_size_mb -eq 64 -and $config.user_dictionary -eq '超导检索词 100000 n' -and
             $config.skip_dirs -contains 'fixture_ignored' -and $config.ocr_enabled
     } 'saved file limit, dictionary, ignored directories and OCR setting'
+    Close-Settings
+    $ocrImage = Join-Path $fixtureDirectory 'scan.png'
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\rustsearch-backend\tests\fixtures\ocr-chinese.png') -Destination $ocrImage
+    Wait-Until { (Read-Control 'IndexStatistics') -match '(?<!\d)131 个文档' } 'OCR image indexed' 60
+    Open-Settings
+    Wait-Until { (Read-Control 'SettingsOcrState' $script:settings) -match '待识别 0 个.*失败 0 个' } 'OCR image recognized' 60
+    Close-Settings
+    Search '采购合同 ext:png' 1 -Explicit
+    (Get-ResultItems)[0].GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    Wait-Until { (Read-Control 'PreviewText').Contains('采购合同') } 'OCR preview text'
+    Wait-Until { !(Get-Control 'PreviewImage').Current.IsOffscreen } 'image preview visible'
+    $null = Save-Window $script:window '08-ocr-image-preview.png'
+    [System.IO.File]::Delete($ocrImage)
+    Wait-Until { (Read-Control 'IndexStatistics') -match '(?<!\d)130 个文档' } 'OCR image removed' 60
+    Search '合同' 130 -Explicit
+    Open-Settings
+    Write-Output 'PASS: WinUI searches recognized Chinese image text and displays the image preview.'
     Invoke-Control 'SettingsPause' $script:settings
     Wait-Until { (Read-Control 'SettingsIndexState' $script:settings) -eq '索引已暂停' } 'pause indexing'
     Invoke-Control 'SettingsPause' $script:settings

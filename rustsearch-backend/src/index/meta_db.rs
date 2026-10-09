@@ -349,7 +349,7 @@ impl MetaDb {
         let mut stmt = self.conn.prepare(
             "SELECT path,display_path,size,mtime,mtime_ns,ext,status FROM files
              WHERE status=2 AND ((ext='pdf' AND ?1) OR (ext!='pdf' AND ?2))
-             ORDER BY indexed_at,path LIMIT 1"
+             ORDER BY indexed_at,path LIMIT 1",
         )?;
         stmt.query_row(params![config.ocr_pdf, config.ocr_images], |r| {
             Ok(FileMeta {

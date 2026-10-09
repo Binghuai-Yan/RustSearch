@@ -1,4 +1,4 @@
-use crate::{extract::MAX_TEXT_SIZE, index::Engine};
+use crate::{config::Config, extract::MAX_TEXT_SIZE, index::Engine};
 use anyhow::{bail, ensure, Context, Result};
 use pdfium_render::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -184,6 +184,11 @@ pub fn run_child() -> Result<()> {
 }
 
 fn run_one(path: &Path, max_pages: u32, engine: &Engine) -> Result<OcrResult> {
+    let ext = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
     let output = tempfile::Builder::new()
         .prefix("rustsearch-ocr-")
         .suffix(".json")
@@ -214,13 +219,28 @@ fn run_one(path: &Path, max_pages: u32, engine: &Engine) -> Result<OcrResult> {
             );
             return Ok(serde_json::from_value(value)?);
         }
-        if engine.stopped() || engine.paused() || started.elapsed() >= Duration::from_secs(310) {
+        let enabled = ocr_enabled_for(&engine.config.lock().unwrap(), &ext, max_pages);
+        if engine.stopped()
+            || engine.paused()
+            || !enabled
+            || started.elapsed() >= Duration::from_secs(310)
+        {
             stop_child_tree(&mut child);
             let _ = child.wait();
             bail!("OCR interrupted or timed out");
         }
         std::thread::sleep(Duration::from_millis(100));
     }
+}
+
+fn ocr_enabled_for(config: &Config, ext: &str, max_pages: u32) -> bool {
+    config.ocr_enabled
+        && config.ocr_max_pages == max_pages
+        && if ext == "pdf" {
+            config.ocr_pdf
+        } else {
+            config.ocr_images
+        }
 }
 
 fn stop_child_tree(child: &mut std::process::Child) {
@@ -250,7 +270,9 @@ pub fn start(engine: Arc<Engine>) -> JoinHandle<()> {
                             let path = PathBuf::from(&meta.display_path);
                             let result = run_one(&path, config.ocr_max_pages, &engine);
                             if !engine.stopped() && !engine.paused() {
-                                if let Err(error) = apply_result(&engine, meta, result) {
+                                if let Err(error) =
+                                    apply_result(&engine, meta, result, config.ocr_max_pages)
+                                {
                                     engine.log("warn", format!("OCR update failed: {error:#}"));
                                 }
                             }
@@ -270,9 +292,13 @@ fn apply_result(
     engine: &Engine,
     meta: crate::index::meta_db::FileMeta,
     result: Result<OcrResult>,
+    max_pages: u32,
 ) -> Result<()> {
     use tantivy::{doc, Term};
     let _mutation = engine.mutations.lock().unwrap();
+    if !ocr_enabled_for(&engine.config.lock().unwrap(), &meta.ext, max_pages) {
+        return Ok(());
+    }
     let current = engine.meta.lock().unwrap().file(&meta.path)?;
     if current
         .as_ref()

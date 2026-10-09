@@ -91,7 +91,7 @@ Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。发
 
 GitHub Actions 在拉取请求中运行静态检查、Rust 测试及两个前端的编译；`main` 推送和手动触发时构建并上传 ZIP/EXE。推送 `v<版本>` 标签后，工作流使用 `docs/releases/v<版本>.md` 创建带详细更新记录的 GitHub Release，并附上两个安装包。CI 跳过需要交互桌面的 UI 测试，本地发布前应运行完整桌面和安装器验收。
 
-发布新版本时，先同步更新 `VERSION`、`rustsearch-backend/Cargo.toml` 和 `Cargo.lock`，编写 `docs/releases/v<版本>.md`，完成本地验收，再推送同版本的标签。缺少详细更新记录或标签与 `VERSION` 不一致时，CI 会停止发布。[历史版本更新记录](docs/releases/v0.1.5.md)和[当前版本更新记录](docs/releases/v0.1.6.md)可在仓库查看。
+发布新版本时，先同步更新 `VERSION`、`rustsearch-backend/Cargo.toml` 和 `Cargo.lock`，编写 `docs/releases/v<版本>.md`，完成本地验收，再推送同版本的标签。缺少详细更新记录或标签与 `VERSION` 不一致时，CI 会停止发布。[历史版本更新记录](docs/releases/v0.1.6.md)和[当前版本更新记录](docs/releases/v0.1.7.md)可在仓库查看。
 
 ## 架构与许可
 

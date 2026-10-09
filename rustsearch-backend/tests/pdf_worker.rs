@@ -373,3 +373,42 @@ fn offline_ocr_indexes_chinese_image_and_scanned_pdf() {
     assert_eq!(updated["total_hits"], 1, "{updated}");
     backend.shutdown();
 }
+
+#[test]
+fn enabling_ocr_after_indexing_processes_existing_scanned_pdf() {
+    if std::env::var_os("RUSTSEARCH_OCR_RUNTIME_DIR").is_none() {
+        eprintln!("OCR runtime is not configured; skipping packaged-engine integration test");
+        return;
+    }
+    let fixture = tempfile::tempdir().unwrap();
+    let root = fixture.path().join("documents");
+    std::fs::create_dir(&root).unwrap();
+    let image = fixture.path().join("source.png");
+    std::fs::write(&image, include_bytes!("fixtures/ocr-chinese.png")).unwrap();
+    scanned_pdf(&root.join("scan.pdf"), &image);
+    let mut backend = IpcProcess::start(&fixture.path().join("data"));
+    backend.receive_until(|message| {
+        message["event"] == "index.finished" && message["data"]["root"] == ""
+    });
+    let added = backend.call(1, "index.add_root", json!({"path":root}));
+    let indexed_root = added["root"].as_str().unwrap();
+    backend.receive_until(|message| {
+        message["event"] == "index.finished" && message["data"]["root"] == indexed_root
+    });
+    assert_eq!(
+        backend.call(2, "search.query", json!({"query":"采购合同"}))["total_hits"],
+        0
+    );
+    backend.call(3, "config.set", json!({"ocr_enabled":true}));
+    backend.receive_until(|message| {
+        message["event"] == "ocr.finished"
+            && message["data"]["path"]
+                .as_str()
+                .is_some_and(|path| path.ends_with("scan.pdf"))
+    });
+    assert_eq!(
+        backend.call(4, "search.query", json!({"query":"采购合同"}))["total_hits"],
+        1
+    );
+    backend.shutdown();
+}
