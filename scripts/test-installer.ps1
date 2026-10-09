@@ -1,5 +1,5 @@
 param(
-    [string]$Installer = (Join-Path $PSScriptRoot '..\dist\RustSearch-0.1.4-win-x64-setup.exe'),
+    [string]$Installer = (Join-Path $PSScriptRoot '..\dist\RustSearch-0.1.5-win-x64-setup.exe'),
     [string]$Published = (Join-Path $PSScriptRoot '..\dist\RustSearch')
 )
 
@@ -73,6 +73,9 @@ try {
             throw "Index fixture is missing: $relative"
         }
     }
+    foreach ($name in @('config.json', 'user_dict.txt', 'ui-preferences.json', 'ui-theme.txt', 'winui-layout.json')) {
+        [IO.File]::WriteAllText((Join-Path $dataDirectory $name), 'RustSearch test data')
+    }
 
     Uninstall-TestBuild 'uninstall-preserve.log'
     if (-not (Test-Path -LiteralPath (Join-Path $dataDirectory 'index\meta.json')) -or
@@ -89,11 +92,13 @@ try {
         (Test-Path -LiteralPath (Join-Path $dataDirectory 'meta.db-shm'))) {
         throw 'Explicit uninstall left index files behind.'
     }
-    if (-not (Test-Path -LiteralPath $sentinel -PathType Leaf) -or
-        -not (Test-Path -LiteralPath $settings -PathType Leaf)) {
-        throw 'Uninstall removed unrelated user files or settings.'
+    foreach ($name in @('config.json', 'user_dict.txt', 'ui-preferences.json', 'ui-theme.txt', 'winui-layout.json')) {
+        if (Test-Path -LiteralPath (Join-Path $dataDirectory $name)) { throw "Explicit uninstall left configuration behind: $name" }
     }
-    Write-Output "PASS: explicit uninstall deletes the custom-folder index and preserves other files. Test logs: $testRoot"
+    if ((Test-Path -LiteralPath $settings) -or -not (Test-Path -LiteralPath $sentinel -PathType Leaf)) {
+        throw 'Uninstall left the RustSearch preference pointer or removed an unrelated user file.'
+    }
+    Write-Output "PASS: explicit uninstall deletes the index and configuration while preserving unrelated files. Test logs: $testRoot"
 }
 finally {
     try {

@@ -16,7 +16,7 @@ public sealed record MigrationProgress(long CopiedBytes, long TotalBytes, int Co
 public sealed record MigrationResult(string SourceDirectory, string DestinationDirectory, long TotalBytes, int FileCount);
 
 /// <summary>
-/// Copies a stopped backend's data to a new, empty directory. The source remains a backup.
+/// Copies a stopped backend's data to a new, empty directory.
 /// The caller must stop the backend before copying and only change the persisted pointer after success.
 /// </summary>
 public static class DataDirectoryMigration
@@ -33,6 +33,34 @@ public static class DataDirectoryMigration
     public static Task<MigrationResult> CopyAsync(string source, string destination,
         IProgress<MigrationProgress>? progress = null, CancellationToken ct = default) =>
         Task.Run(() => CopyCoreAsync(source, destination, progress, ct), ct);
+
+    public static Task RemoveMigratedSourceAsync(string source, string destination) => Task.Run(() =>
+    {
+        source = Normalize(source);
+        destination = Normalize(destination);
+        if (PathComparer.Equals(source, destination) || IsUnder(source, destination) || IsUnder(destination, source))
+            throw new IOException("迁移源目录与目标目录重叠，无法清理旧索引。");
+        if (!File.Exists(Path.Combine(destination, "index", "meta.json")) ||
+            !File.Exists(Path.Combine(destination, "meta.db")))
+            throw new IOException("新目录的索引或数据库不存在，旧索引未清理。");
+
+        var oldIndex = Path.Combine(source, "index");
+        if (Directory.Exists(oldIndex))
+        {
+            EnsureNoLinks(oldIndex);
+            if (!File.Exists(Path.Combine(oldIndex, "meta.json")) ||
+                !File.Exists(Path.Combine(oldIndex, ".managed.json")))
+                throw new IOException("旧目录中的 index 不是 RustSearch 索引，未删除。");
+            Directory.Delete(oldIndex, recursive: true);
+        }
+        foreach (var name in new[] { "meta.db", "meta.db-wal", "meta.db-shm", "config.json",
+                     "user_dict.txt", "ui-preferences.json", "ui-theme.txt", "winui-layout.json" })
+        {
+            var oldFile = Path.Combine(source, name);
+            EnsureNoLinks(oldFile);
+            if (File.Exists(oldFile)) File.Delete(oldFile);
+        }
+    });
 
     private static async Task<MigrationResult> CopyCoreAsync(string source, string destination,
         IProgress<MigrationProgress>? progress, CancellationToken ct)

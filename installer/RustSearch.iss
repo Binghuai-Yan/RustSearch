@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.1.4"
+  #define AppVersion "0.1.5"
 #endif
 #ifndef AppExeName
   #define AppExeName "RustSearch.WinUI.exe"
@@ -41,10 +41,10 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "chinesesimplified"; MessagesFile: "ChineseSimplified.isl"
 
 [CustomMessages]
-english.DeleteIndexPrompt=Delete this user's RustSearch search index and metadata? Other files and settings in the data folder will be kept. Choose No to keep the index.
-chinesesimplified.DeleteIndexPrompt=是否删除当前用户的 RustSearch 搜索索引和元数据库？数据目录中的其他文件和设置会保留。选择“否”则保留索引。
-english.DeleteIndexFailed=The search index could not be deleted (error code %1). The program will be uninstalled, but index files may remain.
-chinesesimplified.DeleteIndexFailed=无法删除搜索索引（错误码 %1）。程序会继续卸载，但索引文件可能仍然保留。
+english.DeleteIndexPrompt=Delete this user's RustSearch index, metadata and application settings? Unrelated files in the data folder will be kept. Choose No to keep your data.
+chinesesimplified.DeleteIndexPrompt=是否删除当前用户的 RustSearch 索引、元数据库和程序配置？数据目录中其他文件会保留。选择“否”则保留数据。
+english.DeleteIndexFailed=RustSearch user data could not be deleted (error code %1). The program will be uninstalled, but data may remain.
+chinesesimplified.DeleteIndexFailed=无法删除 RustSearch 用户数据（错误码 %1）。程序会继续卸载，但数据可能残留。
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -83,8 +83,15 @@ begin
 end;
 
 function InitializeUninstall(): Boolean;
+var
+  ResultCode: Integer;
 begin
   Result := True;
+  if FileExists(ExpandConstant('{app}\RustSearch.WinUI.exe')) then
+    Exec(ExpandConstant('{app}\RustSearch.WinUI.exe'), '--exit', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if FileExists(ExpandConstant('{app}\Compat\RustSearch.UI.exe')) then
+    Exec(ExpandConstant('{app}\Compat\RustSearch.UI.exe'), '--exit', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Sleep(1500);
   DeleteUserIndex := HasDeleteIndexSwitch();
   if not DeleteUserIndex and not UninstallSilent then
     DeleteUserIndex := MsgBox(ExpandConstant('{cm:DeleteIndexPrompt}'),
@@ -100,7 +107,7 @@ begin
     Exit;
 
   Started := Exec(ExpandConstant('{app}\Backend\rustsearch-backend.exe'),
-    '--delete-user-index', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    '--delete-user-data', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   if not Started or (ResultCode <> 0) then
   begin
     Log('RustSearch index deletion failed; code ' + IntToStr(ResultCode));

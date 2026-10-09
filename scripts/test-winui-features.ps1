@@ -219,8 +219,13 @@ function Start-Isolated([string[]]$Arguments = @()) {
     $info.UseShellExecute = $false
     $info.CreateNoWindow = $true
     $info.WorkingDirectory = $testDirectory
-    $info.Environment['RUSTSEARCH_DATA_DIR'] = $dataDirectory
-    $info.Environment['RUSTSEARCH_PREFERENCES_DIR'] = Join-Path $testDirectory 'preferences'
+    $preferences = Join-Path $testDirectory 'preferences'
+    $info.Environment['RUSTSEARCH_PREFERENCES_DIR'] = $preferences
+    if (Test-Path -LiteralPath (Join-Path $preferences 'ui-settings.json')) {
+        $info.Environment.Remove('RUSTSEARCH_DATA_DIR') | Out-Null
+    } else {
+        $info.Environment['RUSTSEARCH_DATA_DIR'] = $dataDirectory
+    }
     $info.Environment.Remove('RUSTSEARCH_BACKEND_PATH') | Out-Null
     foreach ($argument in $Arguments) { $info.ArgumentList.Add($argument) }
     return [System.Diagnostics.Process]::Start($info)
@@ -430,6 +435,21 @@ try {
     Select-FirstResult
     Write-Output 'PASS: UI folder indexing, Chinese instant search, cancellation, pagination, filtering, sorting, phrase query, preview and clipboard.'
 
+    $lateMatchFile = Join-Path $fixtureDirectory 'late-preview.txt'
+    [System.IO.File]::WriteAllText($lateMatchFile, ("预览前段普通文字。`n" * 800) + "预览定位独特词。`n", $utf8)
+    Wait-Until { (Read-Control 'IndexStatistics') -match '(?<!\d)131 个文档' } 'late preview file indexed'
+    Search '预览定位独特词' 1 -Explicit
+    Wait-Until { (Get-ResultItems).Count -gt 0 } 'late preview result'
+    (Get-ResultItems)[0].GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    Wait-Until { (Read-Control 'PreviewText').Contains('预览定位独特词') } 'late preview text'
+    $previewScroll = Get-Control 'PreviewScroller'
+    $scrollPattern = $previewScroll.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern)
+    Wait-Until { $scrollPattern.Current.VerticallyScrollable -and $scrollPattern.Current.VerticalScrollPercent -gt 20 } 'preview scrolled to late search match'
+    [System.IO.File]::Delete($lateMatchFile)
+    Wait-Until { (Read-Control 'IndexStatistics') -match '(?<!\d)130 个文档' } 'late preview file removed'
+    Search '合同' 130 -Explicit
+    Write-Output 'PASS: long preview scrolls to the highlighted search term.'
+
     $listWidth = (Get-Control 'SearchResults').Current.BoundingRectangle.Width
     $splitter = Get-Control 'PaneSplitter'
     [WinUiFeaturesNative]::SetForegroundWindow($script:mainHandle) | Out-Null
@@ -491,15 +511,17 @@ try {
     Wait-Until { (Read-Control 'SettingsCurrentDataDirectory' $script:settings).Trim() -eq $migrationDataDirectory } 'data folder migrated'
     Wait-SettingsIdle
     Wait-Until { (Read-Control 'SettingsStatistics' $script:settings) -match '130 个文档' } 'migrated index remains searchable'
-    if (!(Test-Path -LiteralPath (Join-Path $migrationDataDirectory 'index')) -or !(Test-Path -LiteralPath (Join-Path $dataDirectory 'meta.db'))) { throw 'Migration did not copy index or preserve source.' }
-    Switch-DataDirectory $dataDirectory 130
+    if (!(Test-Path -LiteralPath (Join-Path $migrationDataDirectory 'index')) -or
+        (Test-Path -LiteralPath (Join-Path $dataDirectory 'index')) -or
+        (Test-Path -LiteralPath (Join-Path $dataDirectory 'meta.db'))) { throw 'Migration did not transfer index and remove managed source.' }
+    Switch-DataDirectory $dataDirectory 0
     Set-Text 'SettingsDataDirectory' (Join-Path $fixtureDirectory 'contract-000.txt') $script:settings
     Invoke-Control 'SettingsChangeDataDirectory' $script:settings
     Confirm-Settings '切换'
     Wait-Until { (Read-Control 'SettingsStatus' $script:settings) -match '已恢复原目录' } 'invalid data path rolled back'
     Wait-SettingsIdle
     if ((Read-Control 'SettingsCurrentDataDirectory' $script:settings).Trim() -ne $dataDirectory -or
-        (Read-Control 'SettingsStatistics' $script:settings) -notmatch '130 个文档') { throw 'Failed data switch did not preserve the original index.' }
+        (Read-Control 'SettingsStatistics' $script:settings) -notmatch '0 个文档') { throw 'Failed data switch did not preserve the selected data directory.' }
     Switch-DataDirectory $alternateDataDirectory 0
     Close-Settings
     Search '合同' 0 -Explicit
@@ -509,8 +531,10 @@ try {
     Close-Application -Signal
     Open-Application
     Open-Settings
-    Switch-DataDirectory $alternateDataDirectory 0
-    Switch-DataDirectory $dataDirectory 130
+    if ((Read-Control 'SettingsCurrentDataDirectory' $script:settings).Trim() -ne $alternateDataDirectory) {
+        throw 'Restart did not honor the saved data directory.'
+    }
+    Switch-DataDirectory $migrationDataDirectory 130
     if ((Read-Control 'SettingsDictionary' $script:settings) -ne '超导检索词 100000 n') { throw 'Switching back lost saved dictionary.' }
     Set-Toggle 'SettingsCloseToTray' $true
     Select-Combo 'SettingsTheme' 0 $script:settings

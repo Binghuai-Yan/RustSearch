@@ -119,7 +119,7 @@
             </Grid>
             <TextBlock x:Name="PreviewStatus" Grid.Row="1" Margin="24,0,24,12" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" Visibility="Collapsed" AutomationProperties.AutomationId="PreviewStatus"/>
             <Grid Grid.Row="2" BorderBrush="{ThemeResource DividerBrush}" BorderThickness="0,1,0,0">
-              <ScrollViewer x:Name="PreviewScroller" Padding="24,20,24,24" HorizontalScrollBarVisibility="Disabled"><TextBlock x:Name="PreviewText" FontSize="14" LineHeight="24" TextWrapping="Wrap" IsTextSelectionEnabled="True" AutomationProperties.AutomationId="PreviewText"/></ScrollViewer>
+              <ScrollViewer x:Name="PreviewScroller" Padding="24,20,24,24" HorizontalScrollBarVisibility="Disabled" AutomationProperties.AutomationId="PreviewScroller"><TextBlock x:Name="PreviewText" FontSize="14" LineHeight="24" TextWrapping="Wrap" IsTextSelectionEnabled="True" AutomationProperties.AutomationId="PreviewText"/></ScrollViewer>
               <StackPanel x:Name="PreviewEmptyState" Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24">
                 <local:IconParkIcon Kind="file" Width="32" Height="32" Opacity="0.4"/>
                 <TextBlock Text="未选择文件" Style="{StaticResource CaptionTextStyle}"/>

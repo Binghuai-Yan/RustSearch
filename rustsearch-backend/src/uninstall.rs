@@ -41,6 +41,43 @@ pub fn remove_user_index() -> Result<()> {
     remove_index_in(&selected_data_directory()?)
 }
 
+pub fn remove_user_data() -> Result<()> {
+    let data_directory = selected_data_directory()?;
+    let preferences = env::var_os("RUSTSEARCH_PREFERENCES_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(env::var_os("LOCALAPPDATA").unwrap_or_default()).join("RustSearch")
+        });
+    remove_user_data_in(&data_directory, &preferences)
+}
+
+fn remove_user_data_in(data_directory: &Path, preferences: &Path) -> Result<()> {
+    remove_index_in(data_directory)?;
+    for name in [
+        "config.json",
+        "user_dict.txt",
+        "ui-preferences.json",
+        "ui-theme.txt",
+        "winui-layout.json",
+    ] {
+        remove_managed_file(&data_directory.join(name))?;
+    }
+    remove_managed_file(&preferences.join("ui-settings.json"))?;
+    Ok(())
+}
+
+fn remove_managed_file(path: &Path) -> Result<()> {
+    if !path_exists(path)? {
+        return Ok(());
+    }
+    ensure!(
+        fs::symlink_metadata(path)?.file_type().is_file(),
+        "Not a regular RustSearch file: {}",
+        path.display()
+    );
+    fs::remove_file(path).with_context(|| format!("Cannot remove {}", path.display()))
+}
+
 fn remove_index_in(data_directory: &Path) -> Result<()> {
     if !path_exists(data_directory)? {
         return Ok(());
@@ -136,6 +173,42 @@ mod tests {
     use super::*;
     use crate::index::meta_db::MetaDb;
     use tempfile::tempdir;
+
+    #[test]
+    fn removes_application_settings_but_keeps_unrelated_files() {
+        let temp = tempdir().unwrap();
+        let data = temp.path().join("data");
+        let preferences = temp.path().join("preferences");
+        fs::create_dir_all(&data).unwrap();
+        fs::create_dir_all(&preferences).unwrap();
+        let index = data.join("index");
+        fs::create_dir(&index).unwrap();
+        tantivy::Index::create_in_dir(&index, crate::index::schema::AppSchema::build().0).unwrap();
+        drop(MetaDb::open(&data).unwrap());
+        for name in [
+            "config.json",
+            "user_dict.txt",
+            "ui-preferences.json",
+            "ui-theme.txt",
+            "winui-layout.json",
+        ] {
+            fs::write(data.join(name), b"managed").unwrap();
+        }
+        fs::write(preferences.join("ui-settings.json"), b"managed").unwrap();
+        fs::write(data.join("personal.txt"), b"keep").unwrap();
+
+        remove_user_data_in(&data, &preferences).unwrap();
+
+        assert!(!index.exists());
+        assert!(!data.join("meta.db").exists());
+        assert!(!data.join("config.json").exists());
+        assert!(!data.join("user_dict.txt").exists());
+        assert!(!data.join("ui-preferences.json").exists());
+        assert!(!data.join("ui-theme.txt").exists());
+        assert!(!data.join("winui-layout.json").exists());
+        assert!(!preferences.join("ui-settings.json").exists());
+        assert_eq!(fs::read(data.join("personal.txt")).unwrap(), b"keep");
+    }
 
     #[test]
     fn removes_only_rustsearch_index_files() {

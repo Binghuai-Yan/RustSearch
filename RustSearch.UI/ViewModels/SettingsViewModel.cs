@@ -113,7 +113,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         try { DataDirectoryMigration.Validate(AppPaths.DataDirectory, selected); }
         catch (Exception ex) { StatusMessage = MainViewModel.ErrorText(ex); return; }
         if (MessageBox.Show(
-                $"将当前索引和设置迁移到：\n\n{selected}\n\n目标文件夹必须为空。迁移完成后无需重新建索引，原目录会保留作为备份。是否继续？",
+                $"将当前索引和设置迁移到：\n\n{selected}\n\n目标文件夹必须为空。验证新目录后会清理原目录中的索引和已迁移配置。是否继续？",
                 "迁移数据目录", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
 
@@ -133,6 +133,8 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
             await RefreshAsync();
             await main.RefreshStatsAsync();
             await main.RefreshSearchCommand.ExecuteAsync(null);
+            try { await DataDirectoryMigration.RemoveMigratedSourceAsync(previous, selected); }
+            catch (Exception cleanupError) { StatusMessage = $"迁移完成，但清理原目录失败：{MainViewModel.ErrorText(cleanupError)}"; }
         }
         catch (Exception ex)
         {

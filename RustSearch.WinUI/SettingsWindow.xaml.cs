@@ -58,7 +58,6 @@ public sealed partial class SettingsWindow : Window
         Root.SizeChanged += (_, _) => UpdateResponsiveLayout();
         Root.ActualThemeChanged += (_, _) => UpdateNavigationIcons();
         _navigationReady = true;
-        NavigateTo("index");
         UpdateNavigationIcons();
         _rpc.OnEvent += HandleEvent;
         AppWindow.Closing += (_, args) =>
@@ -113,7 +112,7 @@ public sealed partial class SettingsWindow : Window
     private void UpdateResponsiveLayout()
     {
         if (!_navigationReady || _closed || Root.ActualWidth <= 0) return;
-        var compact = Root.ActualWidth < 800;
+        var compact = Root.ActualWidth < 680;
         if (compact != _compactNavigation)
         {
             _compactNavigation = compact;
@@ -149,8 +148,10 @@ public sealed partial class SettingsWindow : Window
             { State: Microsoft.UI.Windowing.OverlappedPresenterState.Minimized }) return;
         var size = AppWindow.Size;
         var scale = Root.XamlRoot?.RasterizationScale ?? 1.0;
-        var minimumWidth = (int)Math.Ceiling(600 * scale);
-        var minimumHeight = (int)Math.Ceiling(560 * scale);
+        var workArea = Microsoft.UI.Windowing.DisplayArea.GetFromWindowId(AppWindow.Id,
+            Microsoft.UI.Windowing.DisplayAreaFallback.Primary).WorkArea;
+        var minimumWidth = Math.Min((int)Math.Ceiling(600 * scale), Math.Max(400, workArea.Width - 32));
+        var minimumHeight = Math.Min((int)Math.Ceiling(560 * scale), Math.Max(400, workArea.Height - 32));
         if (size.Width >= minimumWidth && size.Height >= minimumHeight) return;
         _enforcingMinimumSize = true;
         try { AppWindow.Resize(new Windows.Graphics.SizeInt32(Math.Max(minimumWidth, size.Width), Math.Max(minimumHeight, size.Height))); }
@@ -200,8 +201,16 @@ public sealed partial class SettingsWindow : Window
     {
         if (_initialized || _shutdownRequested) return;
         _initialized = true;
+        var scale = Root.XamlRoot?.RasterizationScale ?? 1.0;
+        var workArea = Microsoft.UI.Windowing.DisplayArea.GetFromWindowId(AppWindow.Id,
+            Microsoft.UI.Windowing.DisplayAreaFallback.Primary).WorkArea;
+        var width = Math.Min((int)Math.Ceiling(960 * scale), Math.Max(400, workArea.Width - 64));
+        var height = Math.Min((int)Math.Ceiling(760 * scale), Math.Max(400, workArea.Height - 64));
+        if (AppWindow.Size.Width != width || AppWindow.Size.Height != height)
+            AppWindow.Resize(new Windows.Graphics.SizeInt32(width, height));
         EnsureMinimumSize();
         UpdateResponsiveLayout();
+        NavigateTo("index");
         ApplyTheme(Root.ActualTheme);
         await RunOperationAsync("正在加载设置", LoadSettingsAsync, "");
         _loading = false;
@@ -406,10 +415,11 @@ public sealed partial class SettingsWindow : Window
             catch (Exception ex) { StatusText.Text = ErrorText(ex); return; }
         }
         var description = migrate
-            ? $"将当前索引和已保存的设置迁移到：\n\n{selected}\n\n迁移期间会暂停搜索。完成后无需重新建索引，原目录保留为备份。未保存的设置不会迁移。"
+            ? $"将当前索引和已保存的设置迁移到：\n\n{selected}\n\n迁移期间会暂停搜索。新目录验证成功后，将清理原目录中的索引和已迁移配置。"
             : $"将数据目录切换为：\n\n{selected}\n\n使用目标目录中的索引和设置，不复制当前数据。原目录的数据将保留。";
         if (!await ConfirmAsync(migrate ? "迁移数据文件夹" : "更换数据文件夹", description, migrate ? "迁移并切换" : "切换")) return;
-        var completed = migrate ? "迁移完成，已使用新目录的索引和设置。原目录保留为备份。" : "数据目录已更换，已加载该目录的设置和索引。";
+        var completed = migrate ? "迁移完成，已使用新目录，原目录索引已清理。" : "数据目录已更换，已加载该目录的设置和索引。";
+        string? cleanupWarning = null;
         await RunOperationAsync(migrate ? "正在停止引擎，准备迁移" : "正在切换数据目录", async () =>
         {
             var previous = AppPaths.DataDirectory;
@@ -448,6 +458,14 @@ public sealed partial class SettingsWindow : Window
                 IsChangingDataDirectory = false;
                 await RefreshMainAsync(refreshSearch: true);
                 cancellation.Token.ThrowIfCancellationRequested();
+                if (migrate)
+                {
+                    try { await DataDirectoryMigration.RemoveMigratedSourceAsync(previous, selected); }
+                    catch (Exception cleanupError)
+                    {
+                        cleanupWarning = $"迁移已完成，但清理原目录失败：{ErrorText(cleanupError)}";
+                    }
+                }
             }
             catch (Exception switchError)
             {
@@ -483,6 +501,7 @@ public sealed partial class SettingsWindow : Window
                 }
             }
         }, completed);
+        if (cleanupWarning is not null && !_closed && !_shutdownRequested) StatusText.Text = cleanupWarning;
     }
 
     private void CancelMigration_Click(object sender, RoutedEventArgs args)

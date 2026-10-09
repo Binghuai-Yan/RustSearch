@@ -34,6 +34,12 @@ fn main() -> anyhow::Result<()> {
     }
     if std::env::args_os()
         .nth(1)
+        .is_some_and(|a| a == "--delete-user-data")
+    {
+        return uninstall::remove_user_data();
+    }
+    if std::env::args_os()
+        .nth(1)
         .is_some_and(|a| a == "--extract-one")
     {
         let output_path = std::env::args_os()

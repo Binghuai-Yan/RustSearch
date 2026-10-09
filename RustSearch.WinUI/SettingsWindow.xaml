@@ -152,7 +152,7 @@
                 <StackPanel Spacing="8">
                   <CheckBox x:Name="MigrateDataCheckBox" IsChecked="True" Content="迁移当前索引和设置（推荐）"
                       AutomationProperties.AutomationId="SettingsMigrateData" />
-                  <TextBlock Text="迁移到空文件夹，保留原目录作为备份。索引、搜索历史、词典和已保存的设置会一起迁移。取消勾选时，直接使用目标目录中的数据。"
+                  <TextBlock Text="迁移到空文件夹并校验后，清理原目录的索引和已迁移配置。取消勾选时，直接使用目标目录中的数据。"
                       TextWrapping="Wrap" Style="{StaticResource CaptionTextStyle}" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="8">

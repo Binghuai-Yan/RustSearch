@@ -50,7 +50,7 @@ public sealed partial class MainWindow : Window
         QueryBox.TextCompositionEnded += async (_, _) =>
         {
             _isComposingQuery = false;
-            if (_preview.Length > 0) HighlightText.Preview(PreviewText, _preview, QueryBox.Text);
+            if (_preview.Length > 0) ScrollPreviewToMatch(HighlightText.Preview(PreviewText, _preview, QueryBox.Text));
             if (_initialized && !_closing) await SearchAsync(true, true);
         };
         Title = "RustSearch";
@@ -171,7 +171,7 @@ public sealed partial class MainWindow : Window
     {
         if (ClearButton is not null) ClearButton.Visibility = QueryBox.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
         if (!_initialized || _closing || _isComposingQuery) return;
-        if (_preview.Length > 0) HighlightText.Preview(PreviewText, _preview, QueryBox.Text);
+        if (_preview.Length > 0) ScrollPreviewToMatch(HighlightText.Preview(PreviewText, _preview, QueryBox.Text));
         await SearchAsync(true, true);
     }
 
@@ -311,7 +311,7 @@ public sealed partial class MainWindow : Window
             var length = Math.Min(limit, response.Text.Length);
             if (length < response.Text.Length && length > 0 && char.IsHighSurrogate(response.Text[length - 1])) length--;
             _preview = response.Text[..length];
-            HighlightText.Preview(PreviewText, _preview, QueryBox.Text);
+            ScrollPreviewToMatch(HighlightText.Preview(PreviewText, _preview, QueryBox.Text));
             PreviewStatus.Text = response.NeedsOcr ? "此文件没有可提取的文本层" :
                 response.Truncated || response.Text.Length > limit ? "预览已截断" :
                 string.IsNullOrWhiteSpace(_preview) ? "文件没有文本内容" : "";
@@ -331,6 +331,20 @@ public sealed partial class MainWindow : Window
             if (ReferenceEquals(_previewCancellation, cancellation)) _previewCancellation = null;
             cancellation.Dispose();
         }
+    }
+
+    private void ScrollPreviewToMatch(int index)
+    {
+        if (index < 0) return;
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_closing || index >= PreviewText.Text.Length) return;
+            PreviewText.UpdateLayout();
+            var position = PreviewText.ContentStart?.GetPositionAtOffset(index, Microsoft.UI.Xaml.Documents.LogicalDirection.Forward);
+            var bounds = position?.GetCharacterRect(Microsoft.UI.Xaml.Documents.LogicalDirection.Forward);
+            if (bounds is { } rect && double.IsFinite(rect.Y))
+                PreviewScroller.ChangeView(null, Math.Max(0, rect.Y - 80), null, false);
+        });
     }
 
     private void OpenFile_Click(object sender, RoutedEventArgs e) => FileAction(false);

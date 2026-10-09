@@ -31,6 +31,33 @@ await Run("Verified copy preserves binary index, SQLite, dictionary and preferen
     Check((File.GetAttributes(Path.Combine(destination, "index", ".managed.json")) & FileAttributes.Hidden) != 0, "Hidden index file attribute lost");
 });
 
+await Run("Verified migration removes managed source data but keeps unrelated files", async fixture =>
+{
+    var source = fixture.PathFor("source");
+    var destination = fixture.PathFor("destination");
+    Seed(source);
+    Write(source, "personal.txt", "keep this file");
+    await DataDirectoryMigration.CopyAsync(source, destination);
+    await DataDirectoryMigration.RemoveMigratedSourceAsync(source, destination);
+    foreach (var name in new[] { "index", "meta.db", "meta.db-wal", "meta.db-shm", "config.json",
+                 "user_dict.txt", "ui-preferences.json", "ui-theme.txt" })
+        Check(!File.Exists(Path.Combine(source, name)) && !Directory.Exists(Path.Combine(source, name)), $"Old managed data remains: {name}");
+    Check(File.Exists(Path.Combine(source, "ui-settings.json")), "Stable directory pointer was removed");
+    Check(File.Exists(Path.Combine(source, "personal.txt")), "Unrelated source file was removed");
+    Check(File.Exists(Path.Combine(destination, "index", "meta.json")), "Destination index was removed");
+    await DataDirectoryMigration.RemoveMigratedSourceAsync(source, destination);
+});
+
+await Run("Source cleanup refuses missing destination without deleting data", async fixture =>
+{
+    var source = fixture.PathFor("source");
+    var destination = fixture.PathFor("destination");
+    Seed(source);
+    var before = Snapshot(source);
+    await Throws<IOException>(() => DataDirectoryMigration.RemoveMigratedSourceAsync(source, destination));
+    EqualFiles(before, Snapshot(source), "Unverified source");
+});
+
 await Run("Existing populated destination is refused without overwrites", async fixture =>
 {
     var source = fixture.PathFor("source");

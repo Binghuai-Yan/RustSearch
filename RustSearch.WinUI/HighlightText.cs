@@ -42,7 +42,7 @@ public static partial class HighlightText
         block.TextHighlighters.Add(highlighter);
     }
 
-    public static void Preview(TextBlock block, string text, string query)
+    public static int Preview(TextBlock block, string text, string query)
     {
         block.Text = text;
         block.TextHighlighters.Clear();
@@ -51,17 +51,22 @@ public static partial class HighlightText
             .Select(term => term.TrimStart('+').Trim('"'))
             .Where(term => term.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderByDescending(term => term.Length).Select(Regex.Escape).ToArray();
-        if (terms.Length == 0) return;
+        if (terms.Length == 0) return -1;
         var highlighter = CreateHighlighter();
         var regex = new Regex(string.Join("|", terms), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
             TimeSpan.FromSeconds(1));
+        var firstMatch = -1;
         try
         {
             foreach (Match match in regex.Matches(text))
+            {
+                if (firstMatch < 0) firstMatch = match.Index;
                 highlighter.Ranges.Add(new TextRange { StartIndex = match.Index, Length = match.Length });
+            }
         }
         catch (RegexMatchTimeoutException) { }
         block.TextHighlighters.Add(highlighter);
+        return firstMatch;
     }
 
     [GeneratedRegex("(</?b>)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
