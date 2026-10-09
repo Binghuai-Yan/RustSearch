@@ -3,8 +3,9 @@
 Generated from the locked Cargo dependency graph and the restored WinUI/WPF NuGet assets. This inventory includes target-specific and build-time packages; not every entry is copied into the runtime distribution. License values are the upstream package declarations. For packages declaring a license file, consult that file inside the NuGet package; the package license may differ from the license of its source repository.
 
 Bundled IconPark SVGs come from [ByteDance IconPark](https://github.com/bytedance/IconPark) (`@icon-park/svg` 1.4.2), Apache-2.0. The preserved license is `Assets/IconPark/LICENSE` in the release directory and [in the source tree](https://github.com/Binghuai-Yan/RustSearch/blob/main/RustSearch.WinUI/Assets/IconPark/LICENSE). The bundled SQLite library is [public domain](https://www.sqlite.org/copyright.html).
+Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract), [tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast) Chinese/English models (Apache-2.0), and [PDFium binaries chromium/8086](https://github.com/bblanchon/pdfium-binaries) (MIT package license with included third-party notices). Their preserved licenses are under `Backend/OCR/`, including `pdfium-licenses/`.
 
-## Cargo packages (285)
+## Cargo packages (309)
 
 | Package | Version | Declared license |
 | --- | --- | --- |
@@ -25,7 +26,10 @@ Bundled IconPark SVGs come from [ByteDance IconPark](https://github.com/bytedanc
 | [bitpacking](https://github.com/quickwit-oss/bitpacking) | 0.9.3 | MIT |
 | [bstr](https://github.com/BurntSushi/bstr) | 1.13.1 | MIT OR Apache-2.0 |
 | [bumpalo](https://github.com/fitzgen/bumpalo) | 3.20.3 | MIT OR Apache-2.0 |
+| [bytemuck](https://github.com/Lokathor/bytemuck) | 1.25.2 | Zlib OR Apache-2.0 OR MIT |
 | [byteorder](https://github.com/BurntSushi/byteorder) | 1.5.0 | Unlicense OR MIT |
+| [byteorder-lite](https://github.com/image-rs/byteorder-lite) | 0.1.0 | Unlicense OR MIT |
+| [bytes](https://github.com/tokio-rs/bytes) | 1.12.1 | MIT |
 | [calamine](https://github.com/tafia/calamine) | 0.24.0 | MIT |
 | [cc](https://github.com/rust-lang/cc-rs) | 1.4.5 | MIT OR Apache-2.0 |
 | [cedarwood](https://github.com/MnO2/cedarwood) | 0.4.6 | BSD-2-Clause |
@@ -34,6 +38,8 @@ Bundled IconPark SVGs come from [ByteDance IconPark](https://github.com/bytedanc
 | [chardetng](https://github.com/hsivonen/chardetng) | 0.1.17 | Apache-2.0 OR MIT |
 | [chrono](https://github.com/chronotope/chrono) | 0.4.45 | MIT OR Apache-2.0 |
 | [codepage](https://github.com/hsivonen/codepage) | 0.1.2 | Apache-2.0 OR MIT |
+| [console_error_panic_hook](https://github.com/rustwasm/console_error_panic_hook) | 0.1.7 | Apache-2.0/MIT |
+| [console_log](https://github.com/iamcodemaker/console_log) | 1.1.0 | MIT/Apache-2.0 |
 | [core_detect](https://github.com/thomcc/core_detect) | 1.0.0 | MIT/Apache-2.0 |
 | [core-foundation-sys](https://github.com/servo/core-foundation-rs) | 0.8.7 | MIT OR Apache-2.0 |
 | [crc32fast](https://github.com/srijs/rust-crc32fast) | 1.5.1 | MIT OR Apache-2.0 |
@@ -60,6 +66,8 @@ Bundled IconPark SVGs come from [ByteDance IconPark](https://github.com/bytedanc
 | [fallible-streaming-iterator](https://github.com/sfackler/fallible-streaming-iterator) | 0.1.9 | MIT/Apache-2.0 |
 | [fastdivide](https://github.com/fulmicoton/fastdivide) | 0.4.2 | zlib-acknowledgement OR MIT |
 | [fastrand](https://github.com/smol-rs/fastrand) | 2.5.0 | Apache-2.0 OR MIT |
+| [fax](https://github.com/pdf-rs/fax) | 0.2.7 | MIT |
+| [fdeflate](https://github.com/image-rs/fdeflate) | 0.3.7 | MIT OR Apache-2.0 |
 | [filetime](https://github.com/alexcrichton/filetime) | 0.2.29 | MIT/Apache-2.0 |
 | [find-msvc-tools](https://github.com/rust-lang/cc-rs) | 0.1.12 | MIT OR Apache-2.0 |
 | [flate2](https://github.com/rust-lang/flate2-rs) | 1.1.10 | MIT OR Apache-2.0 |
@@ -78,6 +86,7 @@ Bundled IconPark SVGs come from [ByteDance IconPark](https://github.com/bytedanc
 | [getrandom](https://github.com/rust-random/getrandom) | 0.3.4 | MIT OR Apache-2.0 |
 | [getrandom](https://github.com/rust-random/getrandom) | 0.4.3 | MIT OR Apache-2.0 |
 | [globset](https://github.com/BurntSushi/ripgrep/tree/master/crates/globset) | 0.4.20 | Unlicense OR MIT |
+| [half](https://github.com/VoidStarKat/half-rs) | 2.7.1 | MIT OR Apache-2.0 |
 | [hashbrown](https://github.com/rust-lang/hashbrown) | 0.14.5 | MIT OR Apache-2.0 |
 | [hashbrown](https://github.com/rust-lang/hashbrown) | 0.15.5 | MIT OR Apache-2.0 |
 | [hashbrown](https://github.com/rust-lang/hashbrown) | 0.16.1 | MIT OR Apache-2.0 |
@@ -88,6 +97,7 @@ Bundled IconPark SVGs come from [ByteDance IconPark](https://github.com/bytedanc
 | [iana-time-zone](https://github.com/strawlab/iana-time-zone) | 0.1.65 | MIT OR Apache-2.0 |
 | [iana-time-zone-haiku](https://github.com/strawlab/iana-time-zone) | 0.1.2 | MIT OR Apache-2.0 |
 | [ignore](https://github.com/BurntSushi/ripgrep/tree/master/crates/ignore) | 0.4.33 | Unlicense OR MIT |
+| [image](https://github.com/image-rs/image) | 0.25.10 | MIT OR Apache-2.0 |
 | [include-flate](https://github.com/SOF3/include-flate.git) | 0.3.4 | Apache-2.0 |
 | [include-flate-codegen](https://github.com/SOF3/include-flate.git) | 0.3.4 | Apache-2.0 |
 | [include-flate-compress](https://github.com/SOF3/include-flate.git) | 0.3.4 | Apache-2.0 |
@@ -107,6 +117,7 @@ Bundled IconPark SVGs come from [ByteDance IconPark](https://github.com/bytedanc
 | [libc](https://github.com/rust-lang/libc) | 0.2.189 | MIT OR Apache-2.0 |
 | [libflate](https://github.com/sile/libflate) | 2.3.2 | MIT |
 | [libflate_lz77](https://github.com/sile/libflate) | 2.3.0 | MIT |
+| [libloading](https://github.com/nagisa/rust_libloading/) | 0.9.0 | ISC |
 | [libm](https://github.com/rust-lang/compiler-builtins) | 0.2.16 | MIT |
 | [libsqlite3-sys](https://github.com/rusqlite/rusqlite) | 0.28.0 | MIT |
 | [linked-hash-map](https://github.com/contain-rs/linked-hash-map) | 0.5.6 | MIT/Apache-2.0 |
@@ -120,13 +131,16 @@ Bundled IconPark SVGs come from [ByteDance IconPark](https://github.com/bytedanc
 | [mac](https://github.com/reem/rust-mac.git) | 0.1.1 | MIT/Apache-2.0 |
 | [markup5ever](https://github.com/servo/html5ever) | 0.12.1 | MIT OR Apache-2.0 |
 | [matchers](https://github.com/hawkw/matchers) | 0.2.0 | MIT |
+| [maybe-owned](https://github.com/rustonaut/maybe-owned) | 0.3.4 | MIT OR Apache-2.0 |
 | [md5](https://github.com/stainless-steel/md5) | 0.7.0 | Apache-2.0/MIT |
 | [measure_time](https://github.com/PSeitz/rust_measure_time) | 0.8.3 | MIT |
 | [memchr](https://github.com/BurntSushi/memchr) | 2.8.3 | Unlicense OR MIT |
 | [memmap2](https://github.com/RazrFalcon/memmap2-rs) | 0.9.11 | MIT OR Apache-2.0 |
 | [minimal-lexical](https://github.com/Alexhuszagh/minimal-lexical) | 0.2.1 | MIT/Apache-2.0 |
+| [miniz_oxide](https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide) | 0.8.9 | MIT OR Zlib OR Apache-2.0 |
 | [miniz_oxide](https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide) | 0.9.1 | MIT OR Zlib OR Apache-2.0 |
 | [mio](https://github.com/tokio-rs/mio) | 0.8.11 | MIT |
+| [moxcms](https://github.com/awxkee/moxcms.git) | 0.8.1 | BSD-3-Clause OR Apache-2.0 |
 | [multiversion](https://github.com/calebzulawski/multiversion) | 0.8.0 | MIT OR Apache-2.0 |
 | [multiversion_no_op](https://github.com/hsivonen/multiversion_no_op) | 1.0.0 | Apache-2.0 OR MIT |
 | [multiversion-macros](https://github.com/calebzulawski/multiversion) | 0.8.0 | MIT OR Apache-2.0 |
@@ -145,6 +159,7 @@ Bundled IconPark SVGs come from [ByteDance IconPark](https://github.com/bytedanc
 | [parking_lot](https://github.com/Amanieu/parking_lot) | 0.12.5 | MIT OR Apache-2.0 |
 | [parking_lot_core](https://github.com/Amanieu/parking_lot) | 0.9.12 | MIT OR Apache-2.0 |
 | [pdf-extract](https://github.com/jrmuizel/pdf-extract) | 0.7.10 | MIT |
+| [pdfium-render](https://github.com/ajrcarey/pdfium-render) | 0.9.4 | MIT OR Apache-2.0 |
 | [phf](https://github.com/sfackler/rust-phf) | 0.10.1 | MIT |
 | [phf](https://github.com/rust-phf/rust-phf) | 0.11.3 | MIT |
 | [phf_codegen](https://github.com/sfackler/rust-phf) | 0.10.0 | MIT |
@@ -155,7 +170,9 @@ Bundled IconPark SVGs come from [ByteDance IconPark](https://github.com/bytedanc
 | [phf_shared](https://github.com/sfackler/rust-phf) | 0.10.0 | MIT |
 | [phf_shared](https://github.com/rust-phf/rust-phf) | 0.11.3 | MIT |
 | [pin-project-lite](https://github.com/taiki-e/pin-project-lite) | 0.2.17 | Apache-2.0 OR MIT |
+| [piston-float](https://github.com/pistondevelopers/float.git) | 1.0.1 | MIT |
 | [pkg-config](https://github.com/rust-lang/pkg-config-rs) | 0.3.34 | MIT OR Apache-2.0 |
+| [png](https://github.com/image-rs/image-png) | 0.18.1 | MIT OR Apache-2.0 |
 | [pom](https://github.com/J-F-Liu/pom.git) | 1.1.0 | MIT |
 | [postscript](https://github.com/bodoni/postscript) | 0.14.1 | Apache-2.0/MIT |
 | [powerfmt](https://github.com/jhpratt/powerfmt) | 0.2.0 | MIT OR Apache-2.0 |
@@ -164,6 +181,8 @@ Bundled IconPark SVGs come from [ByteDance IconPark](https://github.com/bytedanc
 | [proc-macro-error-attr3](https://github.com/gamma0987/proc-macro-error3) | 3.1.1 | MIT OR Apache-2.0 |
 | [proc-macro-error3](https://github.com/gamma0987/proc-macro-error3) | 3.1.1 | MIT OR Apache-2.0 |
 | [proc-macro2](https://github.com/dtolnay/proc-macro2) | 1.0.107 | MIT OR Apache-2.0 |
+| [pxfm](https://github.com/awxkee/pxfm) | 0.1.30 | BSD-3-Clause OR Apache-2.0 |
+| [quick-error](http://github.com/tailhook/quick-error) | 2.0.1 | MIT/Apache-2.0 |
 | [quick-xml](https://github.com/tafia/quick-xml) | 0.31.0 | MIT |
 | [quote](https://github.com/dtolnay/quote) | 1.0.47 | MIT OR Apache-2.0 |
 | [r-efi](https://github.com/r-efi/r-efi) | 5.3.0 | MIT OR Apache-2.0 OR LGPL-2.1-or-later |
@@ -224,6 +243,7 @@ Bundled IconPark SVGs come from [ByteDance IconPark](https://github.com/bytedanc
 | [thiserror](https://github.com/dtolnay/thiserror) | 1.0.69 | MIT OR Apache-2.0 |
 | [thiserror-impl](https://github.com/dtolnay/thiserror) | 1.0.69 | MIT OR Apache-2.0 |
 | [thread_local](https://github.com/Amanieu/thread_local-rs) | 1.1.10 | MIT OR Apache-2.0 |
+| [tiff](https://github.com/image-rs/image-tiff) | 0.11.3 | MIT |
 | [time](https://github.com/time-rs/time) | 0.3.55 | MIT OR Apache-2.0 |
 | [time-core](https://github.com/time-rs/time) | 0.1.9 | MIT OR Apache-2.0 |
 | [time-macros](https://github.com/time-rs/time) | 0.2.32 | MIT OR Apache-2.0 |
@@ -239,15 +259,18 @@ Bundled IconPark SVGs come from [ByteDance IconPark](https://github.com/bytedanc
 | [unicode-normalization](https://github.com/unicode-rs/unicode-normalization) | 0.1.25 | MIT OR Apache-2.0 |
 | [unicode-width](https://github.com/unicode-rs/unicode-width) | 0.2.2 | MIT OR Apache-2.0 |
 | [utf-8](https://github.com/SimonSapin/rust-utf8) | 0.7.6 | MIT OR Apache-2.0 |
+| [utf16string](https://github.com/getsentry/utf16string) | 0.2.0 | MIT OR Apache-2.0 |
 | [utf8-ranges](https://github.com/BurntSushi/utf8-ranges) | 1.0.5 | Unlicense/MIT |
 | [uuid](https://github.com/uuid-rs/uuid) | 1.26.0 | Apache-2.0 OR MIT |
 | [valuable](https://github.com/tokio-rs/valuable) | 0.1.1 | MIT |
 | [vcpkg](https://github.com/mcgoo/vcpkg-rs) | 0.2.15 | MIT/Apache-2.0 |
+| [vecmath](https://github.com/pistondevelopers/vecmath.git) | 1.0.0 | MIT |
 | [version_check](https://github.com/SergioBenitez/version_check) | 0.9.5 | MIT/Apache-2.0 |
 | [walkdir](https://github.com/BurntSushi/walkdir) | 2.5.0 | Unlicense/MIT |
 | [wasi](https://github.com/bytecodealliance/wasi) | 0.11.1+wasi-snapshot-preview1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | [wasip2](https://github.com/bytecodealliance/wasi-rs) | 1.0.4+wasi-0.2.12 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen) | 0.2.128 | MIT OR Apache-2.0 |
+| [wasm-bindgen-futures](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/futures) | 0.4.78 | MIT OR Apache-2.0 |
 | [wasm-bindgen-macro](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/macro) | 0.2.128 | MIT OR Apache-2.0 |
 | [wasm-bindgen-macro-support](https://github.com/wasm-bindgen/wasm-bindgen/tree/main/crates/macro-support) | 0.2.128 | MIT OR Apache-2.0 |
 | [wasm-bindgen-shared](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/shared) | 0.2.128 | MIT OR Apache-2.0 |
@@ -293,6 +316,8 @@ Bundled IconPark SVGs come from [ByteDance IconPark](https://github.com/bytedanc
 | [zstd](https://github.com/gyscos/zstd-rs) | 0.13.3 | MIT |
 | [zstd-safe](https://github.com/gyscos/zstd-rs) | 7.3.0 | BSD-3-Clause |
 | [zstd-sys](https://github.com/gyscos/zstd-rs) | 2.1.0+zstd.1.5.7 | BSD-3-Clause |
+| [zune-core](https://github.com/etemesi254/zune-image) | 0.5.3 | MIT OR Apache-2.0 OR Zlib |
+| [zune-jpeg](https://github.com/etemesi254/zune-image/tree/dev/crates/zune-jpeg) | 0.5.15 | MIT OR Apache-2.0 OR Zlib |
 
 ## NuGet packages (20)
 

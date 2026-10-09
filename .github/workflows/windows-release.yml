@@ -38,6 +38,7 @@ jobs:
             ${{ runner.temp }}\RustSearch-Dependencies\cargo\registry
             ${{ runner.temp }}\RustSearch-Dependencies\cargo\git
             ${{ runner.temp }}\RustSearch-Dependencies\nuget\packages
+            ${{ runner.temp }}\RustSearch-Dependencies\ocr
           key: windows-deps-${{ hashFiles('rustsearch-backend/Cargo.lock', '**/*.csproj') }}
           restore-keys: |
             windows-deps-
@@ -70,6 +71,7 @@ jobs:
           RUSTSEARCH_DEPENDENCY_CACHE_DIR: ${{ runner.temp }}\RustSearch-Dependencies
         run: |
           . ./scripts/use-dependency-cache.ps1
+          $env:RUSTSEARCH_OCR_RUNTIME_DIR = ./scripts/prepare-ocr-runtime.ps1
           cargo test --manifest-path rustsearch-backend/Cargo.toml --locked
 
       - name: Build frontends for pull requests

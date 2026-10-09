@@ -4,6 +4,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -36,7 +37,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         new("Office", ["docx", "xlsx", "xls", "xlsb", "pptx"]),
         new("文本", ["txt", "md", "log", "csv", "json", "xml", "yaml", "yml", "ini"]),
         new("代码", ["rs", "py", "js", "ts", "tsx", "jsx", "cs", "c", "cpp", "h", "java", "go", "sql", "html", "css"]),
-        new("EPUB", ["epub"])
+        new("EPUB", ["epub"]),
+        new("图片", ["png", "jpg", "jpeg", "bmp", "tif", "tiff"])
     ];
     public IReadOnlyList<SortOption> Sorts { get; } =
     [new("相关度", "relevance"), new("修改时间 ↓", "mtime_desc"), new("文件大小 ↓", "size_desc"), new("文件大小 ↑", "size_asc")];
@@ -66,11 +68,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _previewText = "";
     [ObservableProperty] private string _previewHtml = "";
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPreviewImage))]
+    private BitmapImage? _previewImage;
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPreviewStatus))]
     private string _previewStatus = "";
     [ObservableProperty] private bool _isPreviewLoading;
     [ObservableProperty] private bool _hasSelection;
     public bool HasPreviewStatus => !string.IsNullOrEmpty(PreviewStatus);
+    public bool HasPreviewImage => PreviewImage is not null;
 
     public MainViewModel(BackendProcess backend, JsonRpcClient rpc)
     {
@@ -244,10 +250,28 @@ public partial class MainViewModel : ObservableObject, IDisposable
         HasSelection = hit is not null;
         PreviewText = "";
         PreviewHtml = "";
+        PreviewImage = null;
         PreviewStatus = "";
         PreviewTitle = hit?.Filename ?? "文件预览";
         IsPreviewLoading = false;
         if (hit is null) return;
+        if (hit.Ext is "png" or "jpg" or "jpeg" or "bmp" or "tif" or "tiff")
+        {
+            try
+            {
+                using var stream = new FileStream(hit.Path, FileMode.Open, FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete);
+                var image = new BitmapImage();
+                image.BeginInit();
+                image.CacheOption = BitmapCacheOption.OnLoad;
+                image.DecodePixelWidth = 1200;
+                image.StreamSource = stream;
+                image.EndInit();
+                image.Freeze();
+                PreviewImage = image;
+            }
+            catch (Exception ex) { PreviewStatus = ErrorText(ex); }
+        }
         var cancellation = new CancellationTokenSource();
         _previewCancellation = cancellation;
         IsPreviewLoading = true;
@@ -259,7 +283,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             const int previewCharacterLimit = 250_000;
             PreviewText = response.Text.Length > previewCharacterLimit ? response.Text[..previewCharacterLimit] : response.Text;
             PreviewHtml = BuildHighlightedHtml(PreviewText, Query);
-            PreviewStatus = response.NeedsOcr ? "此文件没有可提取的文本层" :
+            PreviewStatus = response.NeedsOcr ? "等待后台文字识别" :
                 response.Truncated || response.Text.Length > previewCharacterLimit ? "预览已截断" : string.IsNullOrWhiteSpace(response.Text) ? "文件没有文本内容" : "";
         }
         catch (OperationCanceledException) { }

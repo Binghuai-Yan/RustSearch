@@ -70,6 +70,18 @@
                             </StackPanel>
                         </Grid>
                         <StackPanel Grid.Row="3" Margin="0,20,0,0">
+                            <TextBlock Text="离线文字识别" FontWeight="SemiBold" Margin="0,0,0,10" />
+                            <CheckBox Content="启用图片和扫描 PDF 识别" IsChecked="{Binding OcrEnabled}" />
+                            <WrapPanel Margin="0,10,0,0">
+                                <CheckBox Content="图片" IsChecked="{Binding OcrImages}" Margin="0,0,20,0" />
+                                <CheckBox Content="PDF" IsChecked="{Binding OcrPdf}" />
+                            </WrapPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <TextBlock Text="单个 PDF 最多识别页数" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                <TextBox Text="{Binding OcrMaxPages, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True}" Width="60" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding OcrState}" Foreground="{DynamicResource TextMutedBrush}" Margin="0,10,0,0" />
+                            <Button Command="{Binding RetryOcrCommand}" Content="重试识别失败文件" HorizontalAlignment="Left" Margin="0,8,0,20" />
                             <CheckBox Content="关闭主窗口时最小化到系统托盘" IsChecked="{Binding CloseToTray}" AutomationProperties.Name="关闭主窗口时最小化到系统托盘" />
                             <Button Command="{Binding SaveCommand}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" Margin="0,14,0,0"><StackPanel Orientation="Horizontal"><controls:IconParkIcon Icon="copy" Width="14" Height="14" IconBrush="White" Margin="0,0,6,0" /><TextBlock Text="保存设置" /></StackPanel></Button>
                         </StackPanel>

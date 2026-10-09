@@ -21,9 +21,12 @@ $oldCargoHome = $env:CARGO_HOME
 $oldNuGetPackages = $env:NUGET_PACKAGES
 $oldNuGetHttpCache = $env:NUGET_HTTP_CACHE_PATH
 $oldNuGetScratch = $env:NUGET_SCRATCH
+$oldOcrRuntime = $env:RUSTSEARCH_OCR_RUNTIME_DIR
 try {
     . (Join-Path $PSScriptRoot 'scripts\use-dependency-cache.ps1')
     $env:RUSTSEARCH_VERSION = $Version
+    $ocrRuntime = & (Join-Path $PSScriptRoot 'scripts\prepare-ocr-runtime.ps1')
+    $env:RUSTSEARCH_OCR_RUNTIME_DIR = $ocrRuntime
     Push-Location $backend
     try {
         if (-not $SkipTests) {
@@ -55,6 +58,7 @@ try {
     $backendOutput = Join-Path $output 'Backend'
     New-Item -ItemType Directory -Path $backendOutput -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $backend 'target\release\rustsearch-backend.exe') -Destination $backendOutput -Force
+    Copy-Item -LiteralPath $ocrRuntime -Destination (Join-Path $backendOutput 'OCR') -Recurse -Force
     if ($useWinUI) {
         $compatOutput = Join-Path $output 'Compat'
         & dotnet publish (Join-Path $PSScriptRoot 'RustSearch.UI\RustSearch.UI.csproj') -c Release -r win-x64 --self-contained true "-p:Version=$Version" -o $compatOutput
@@ -73,6 +77,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\verification.md') -Destination (Join-Path $output 'docs') -Force
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\fluent-redesign.md') -Destination (Join-Path $output 'docs') -Force
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\review-2026-10.md') -Destination (Join-Path $output 'docs') -Force
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\ocr-design.md') -Destination (Join-Path $output 'docs') -Force
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\releases') -Destination (Join-Path $output 'docs') -Recurse -Force
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\screenshots') -Destination (Join-Path $output 'docs') -Recurse -Force
     $manifest = [ordered]@{ name = 'RustSearch'; version = $Version; frontend = if ($useWinUI) { 'WinUI 3' } else { 'WPF' }; runtime = 'win-x64'; self_contained = ($framework -eq 'true'); built_at = [DateTimeOffset]::UtcNow.ToString('O') }
@@ -108,6 +113,7 @@ try {
     Write-Output "Release ready: $(Join-Path $output $uiExe)"
 } finally {
     $env:RUSTSEARCH_VERSION = $oldVersion
+    $env:RUSTSEARCH_OCR_RUNTIME_DIR = $oldOcrRuntime
     $env:CARGO_HOME = $oldCargoHome
     $env:NUGET_PACKAGES = $oldNuGetPackages
     $env:NUGET_HTTP_CACHE_PATH = $oldNuGetHttpCache

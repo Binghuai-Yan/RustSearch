@@ -88,7 +88,7 @@ function Select-SettingsSectionForControl([string]$Id, $Scope) {
     if (!$script:settings -or !$Scope -or $Scope.Current.NativeWindowHandle -ne $script:settings.Current.NativeWindowHandle) { return }
     $section = switch -Regex ($Id) {
         '^Settings(RootPath|BrowseRoot|AddRoot|Roots|RemoveRoot|RebuildRoot|Pause|Refresh|Statistics|IndexState)$' { 'Index'; break }
-        '^Settings(MaxFileSize|SkipDirectories|Dictionary|Save)$' { 'Options'; break }
+        '^Settings(MaxFileSize|SkipDirectories|Dictionary|OcrEnabled|OcrImages|OcrPdf|OcrMaxPages|OcrState|RetryOcr|Save)$' { 'Options'; break }
         '^Settings(Theme|CloseToTray)$' { 'Appearance'; break }
         '^Settings(CurrentDataDirectory|DataDirectory|BrowseDataDirectory|ChangeDataDirectory|OpenDataDirectory|MigrateData)$' { 'Storage'; break }
         '^SettingsVersion$' { 'About'; break }
@@ -481,12 +481,14 @@ try {
     Set-MaximumSize 64
     Set-Text 'SettingsDictionary' '超导检索词 100000 n' $script:settings
     Set-Text 'SettingsSkipDirectories' "node_modules`ntarget`nfixture_ignored" $script:settings
+    Set-Toggle 'SettingsOcrEnabled' $true
     Invoke-Control 'SettingsSave' $script:settings
     Wait-SettingsIdle
     Wait-Until {
         $config = Get-Content -LiteralPath (Join-Path $dataDirectory 'config.json') -Raw | ConvertFrom-Json
-        $config.max_file_size_mb -eq 64 -and $config.user_dictionary -eq '超导检索词 100000 n' -and $config.skip_dirs -contains 'fixture_ignored'
-    } 'saved file limit, dictionary and ignored directories'
+        $config.max_file_size_mb -eq 64 -and $config.user_dictionary -eq '超导检索词 100000 n' -and
+            $config.skip_dirs -contains 'fixture_ignored' -and $config.ocr_enabled
+    } 'saved file limit, dictionary, ignored directories and OCR setting'
     Invoke-Control 'SettingsPause' $script:settings
     Wait-Until { (Read-Control 'SettingsIndexState' $script:settings) -eq '索引已暂停' } 'pause indexing'
     Invoke-Control 'SettingsPause' $script:settings
@@ -542,7 +544,7 @@ try {
     $settingsScale = [WinUiFeaturesNative]::GetDpiForWindow([IntPtr]$script:settings.Current.NativeWindowHandle) / 96.0
     $settingsTransform.Resize(600*$settingsScale,560*$settingsScale)
     Start-Sleep -Milliseconds 400
-    foreach ($id in @('SettingsBrowseRoot','SettingsAddRoot','SettingsRemoveRoot','SettingsRebuildRoot','SettingsPause','SettingsChangeDataDirectory','SettingsSave')) {
+    foreach ($id in @('SettingsBrowseRoot','SettingsAddRoot','SettingsRemoveRoot','SettingsRebuildRoot','SettingsPause','SettingsChangeDataDirectory','SettingsOcrEnabled','SettingsRetryOcr','SettingsSave')) {
         Assert-ControlFits $id $script:settings
     }
     Select-SettingsSection 'Storage'

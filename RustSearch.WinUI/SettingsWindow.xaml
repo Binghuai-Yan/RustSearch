@@ -105,6 +105,23 @@
                 <TextBox x:Name="SkipDirectoriesBox" Header="忽略目录" AcceptsReturn="True" Height="132" TextWrapping="Wrap"
                     ScrollViewer.VerticalScrollBarVisibility="Auto" AutomationProperties.AutomationId="SettingsSkipDirectories" />
                 <Border Height="1" Background="{ThemeResource DividerBrush}" />
+                <StackPanel Spacing="12">
+                  <TextBlock Text="离线文字识别" Style="{StaticResource SectionTitleStyle}" />
+                  <ToggleSwitch x:Name="OcrEnabledSwitch" Header="识别图片和扫描 PDF" OnContent="已启用" OffContent="已关闭"
+                      AutomationProperties.AutomationId="SettingsOcrEnabled" />
+                  <StackPanel Orientation="Horizontal" Spacing="24">
+                    <CheckBox x:Name="OcrImagesCheckBox" Content="图片" AutomationProperties.AutomationId="SettingsOcrImages" />
+                    <CheckBox x:Name="OcrPdfCheckBox" Content="PDF" AutomationProperties.AutomationId="SettingsOcrPdf" />
+                  </StackPanel>
+                  <NumberBox x:Name="OcrMaxPagesBox" Header="单个 PDF 最多识别页数" Minimum="1" Maximum="500" Value="100"
+                      SmallChange="10" SpinButtonPlacementMode="Inline" Width="220" HorizontalAlignment="Left"
+                      AutomationProperties.AutomationId="SettingsOcrMaxPages" />
+                  <TextBlock x:Name="OcrStateText" Foreground="{ThemeResource MutedBrush}" AutomationProperties.AutomationId="SettingsOcrState" />
+                  <Button Click="RetryOcr_Click" HorizontalAlignment="Left" AutomationProperties.AutomationId="SettingsRetryOcr">
+                    <StackPanel Orientation="Horizontal" Spacing="6"><local:IconParkIcon Kind="refresh" Width="16" Height="16" /><TextBlock Text="重试识别失败文件" /></StackPanel>
+                  </Button>
+                </StackPanel>
+                <Border Height="1" Background="{ThemeResource DividerBrush}" />
                 <StackPanel Spacing="8">
                   <TextBox x:Name="DictionaryBox" Header="自定义分词词典" AcceptsReturn="True" Height="196" TextWrapping="Wrap"
                       ScrollViewer.VerticalScrollBarVisibility="Auto" AutomationProperties.AutomationId="SettingsDictionary" />

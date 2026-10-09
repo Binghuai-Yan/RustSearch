@@ -29,6 +29,8 @@ chrono = "0.4"
 regex = "1"
 crossbeam-channel = "0.5"
 tempfile = "3"
+pdfium-render = { version = "0.9.4", default-features = false, features = ["pdfium_7881", "image_025", "thread_safe"] }
+image = { version = "0.25", default-features = false, features = ["bmp", "jpeg", "png", "tiff"] }
 
 [profile.release]
 opt-level = 3

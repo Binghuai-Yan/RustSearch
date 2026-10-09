@@ -1,6 +1,7 @@
 mod docx;
 mod epub;
 mod html;
+mod image;
 mod pdf;
 mod plain_text;
 mod pptx;
@@ -69,6 +70,12 @@ pub fn supported_extension(ext: &str) -> bool {
             | "xlsb"
             | "pptx"
             | "epub"
+            | "png"
+            | "jpg"
+            | "jpeg"
+            | "bmp"
+            | "tif"
+            | "tiff"
     )
 }
 
@@ -80,6 +87,7 @@ pub fn extract(path: &Path) -> Result<ExtractResult> {
         .to_ascii_lowercase();
     match ext.as_str() {
         "pdf" => pdf::extract(path),
+        "png" | "jpg" | "jpeg" | "bmp" | "tif" | "tiff" => image::extract(path),
         "docx" => docx::extract(path),
         "xlsx" | "xls" | "xlsb" => xlsx::extract(path),
         "pptx" => pptx::extract(path),

@@ -44,6 +44,8 @@ Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。发
 
    [单独查看外观设置截图](https://github.com/Binghuai-Yan/RustSearch/blob/main/docs/screenshots/appearance.png)
 
+5. 需要搜索图片或扫描 PDF 中的文字时，在“索引选项”开启“识别图片和扫描 PDF”，选择文件类型与单个 PDF 的页数上限，然后保存。普通索引先完成，OCR 在后台逐个处理；设置页显示待识别和失败数量，失败文件可手动重试。OCR 完成后重新搜索即可看到文字结果。识别完全在本机运行。[OCR 设计与验收](docs/ocr-design.md)说明处理流程和限制。
+
 ## 功能
 
 - 中文和英文全文搜索，300 ms 防抖；文件类型筛选、相关度/时间/大小排序、分页及最近搜索历史。
@@ -51,8 +53,9 @@ Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。发
 - 添加、移除、重建索引目录，暂停/恢复索引，文件变化自动更新。后台索引期间保留当前搜索结果和选中项，手动刷新后展示新结果。
 - 浅色与深色主题、可选托盘驻留、自定义分词词典、忽略目录和最大文件大小设置。深色界面见[截图](https://github.com/Binghuai-Yan/RustSearch/blob/main/docs/screenshots/main-dark.png)。
 - 可迁移索引和设置到新的数据文件夹；验证成功后清理原目录中的已迁移数据。
+- 可选离线 OCR：识别 PNG、JPEG、BMP、TIFF 图片及扫描/混合 PDF，按页记录 PDF 识别文字；OCR 期间不自动刷新当前搜索结果。
 
-支持纯文本、Markdown、常见代码和配置文件、CSV、HTML、PDF、DOCX、XLSX/XLS/XLSB、PPTX、EPUB。文本编码包括 UTF-8、GBK/GB18030 和 UTF-16。默认跳过隐藏目录、`.gitignore` 忽略项、常见依赖/构建目录、Office 临时文件及超过 200 MB 的文件。扫描版 PDF 暂不支持 OCR，旧版 `.doc` 和 `.ppt` 暂不支持。
+支持纯文本、Markdown、常见代码和配置文件、CSV、HTML、PDF、DOCX、XLSX/XLS/XLSB、PPTX、EPUB，以及 PNG/JPEG/BMP/TIFF 图片。文本编码包括 UTF-8、GBK/GB18030 和 UTF-16。默认跳过隐藏目录、`.gitignore` 忽略项、常见依赖/构建目录、Office 临时文件及超过 200 MB 的文件。OCR 默认关闭；开启后使用随包提供的 Tesseract 中英模型和 PDFium，无需联网。图片上不绘制识别框；手写体、复杂表格及旧版 `.doc`、`.ppt` 暂不支持。
 
 搜索框支持以下语法：
 
@@ -82,7 +85,7 @@ Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。发
 ./build.ps1
 ```
 
-脚本运行 Rust 测试，发布自包含 WinUI 主程序和 WPF 输入法兼容界面，执行桌面回归测试，并生成 `dist/` 下的便携 ZIP 和安装 EXE。非交互环境使用 `./build.ps1 -SkipUITests`，仍运行 Rust 测试；只生成 ZIP 可加 `-SkipInstaller`。完整安装、启动、卸载验收可用 `./build.ps1 -TestInstaller`。
+脚本准备固定版本的 Tesseract、PDFium 和中英模型并校验 SHA-256，运行 Rust 测试，发布自包含 WinUI 主程序和 WPF 输入法兼容界面，执行桌面回归测试，并生成 `dist/` 下的便携 ZIP 和安装 EXE。准备 OCR 运行时需要联网及 7-Zip，发布包使用时不需要联网。非交互环境使用 `./build.ps1 -SkipUITests`，仍运行 Rust 测试；只生成 ZIP 可加 `-SkipInstaller`。完整安装、启动、卸载验收可用 `./build.ps1 -TestInstaller`。
 
 依赖缓存默认位于可用的 `E:\cache\RustSearch-Dependencies`，否则位于用户本地应用数据目录；也可用 `RUSTSEARCH_DEPENDENCY_CACHE_DIR` 指定。它与应用索引数据分离。单独执行 Cargo 或 dotnet 命令前，可运行 `. ./scripts/use-dependency-cache.ps1` 采用相同缓存路径。
 
@@ -98,7 +101,7 @@ GitHub Actions 在拉取请求中运行静态检查、Rust 测试及两个前端
 
 ## 开源项目与许可
 
-RustSearch 自有代码采用 [MIT License](LICENSE)。第三方组件保留各自的许可；下表列出项目直接使用的开源项目和构建工具。[完整第三方依赖清单](THIRD_PARTY_NOTICES.md)按锁定版本列出 285 个 Cargo 包和 20 个 NuGet 包，包括传递依赖、项目链接及其声明的许可。Windows App SDK 等 NuGet 二进制包的分发许可可能与源码许可不同，清单会标明包内许可文件。
+RustSearch 自有代码采用 [MIT License](LICENSE)。第三方组件保留各自的许可；下表列出项目直接使用的开源项目和构建工具。[完整第三方依赖清单](THIRD_PARTY_NOTICES.md)按锁定版本列出 309 个 Cargo 包和 20 个 NuGet 包，包括传递依赖、项目链接及其声明的许可。Windows App SDK 等 NuGet 二进制包的分发许可可能与源码许可不同，清单会标明包内许可文件。OCR 使用 [Tesseract](https://github.com/tesseract-ocr/tesseract)、[tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast) 和 [PDFium binaries](https://github.com/bblanchon/pdfium-binaries)，许可文件随发布包存放在 `Backend/OCR/`。
 
 | 前端、资源与发行工具 | 用途 | 许可 |
 | --- | --- | --- |

@@ -96,6 +96,8 @@ pub struct SearchHit {
     pub mtime: u64,
     pub score: f32,
     pub snippets: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ocr_page: Option<u32>,
 }
 #[derive(Debug, Clone, Serialize)]
 pub struct SearchResult {

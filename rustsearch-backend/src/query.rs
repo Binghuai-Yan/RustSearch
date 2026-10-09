@@ -405,11 +405,20 @@ fn search_query(
         };
         let path = text(engine.fields.display_path);
         let filename = text(engine.fields.filename);
-        let content = engine
-            .meta
-            .lock()
-            .unwrap()
-            .content(&text(engine.fields.path))?;
+        let (content, ocr_pages) = {
+            let meta = engine.meta.lock().unwrap();
+            let key = text(engine.fields.path);
+            (meta.content(&key)?, meta.ocr_pages(&key)?)
+        };
+        let ocr_page = ocr_pages.into_iter().find_map(|(page, offset, length)| {
+            content
+                .get(offset..offset.checked_add(length)?)
+                .filter(|value| {
+                    let normalized = value.to_lowercase();
+                    highlight_terms.iter().any(|term| normalized.contains(term))
+                })
+                .map(|_| page)
+        });
         let snippets = snippet_windows(&content, &highlight_terms)
             .into_iter()
             .map(|window| {
@@ -442,6 +451,7 @@ fn search_query(
                 .unwrap_or(0),
             score,
             snippets,
+            ocr_page,
         });
     }
     let result = SearchResult {

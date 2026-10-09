@@ -153,6 +153,32 @@ mod tests {
         assert_eq!(db.roots().unwrap()[0].total_docs, 0);
         assert!(db.content(path).unwrap().is_empty());
     }
+
+    #[test]
+    fn ocr_queue_does_not_starve_pdf_when_images_are_disabled() {
+        let fixture = Fixture::new();
+        let mut db = MetaDb::open(&fixture.0).unwrap();
+        let records = (0..129)
+            .map(|i| {
+                let path = format!("image-{i:03}.png");
+                let mut meta = file(&path, 2);
+                meta.ext = "png".into();
+                (meta, None)
+            })
+            .chain(std::iter::once({
+                let mut meta = file("scan.pdf", 2);
+                meta.ext = "pdf".into();
+                (meta, None)
+            }))
+            .collect::<Vec<_>>();
+        db.save_batch(&records, &[]).unwrap();
+        let config = crate::config::Config {
+            ocr_images: false,
+            ocr_pdf: true,
+            ..Default::default()
+        };
+        assert_eq!(db.next_ocr_file(&config).unwrap().unwrap().path, "scan.pdf");
+    }
 }
 #[derive(Clone, Debug, Serialize)]
 pub struct Root {
@@ -181,7 +207,9 @@ impl MetaDb {
             CREATE TABLE IF NOT EXISTS contents(path TEXT PRIMARY KEY,compressed BLOB NOT NULL);
             CREATE TABLE IF NOT EXISTS history(query TEXT PRIMARY KEY,searched_at INTEGER NOT NULL);
             CREATE TABLE IF NOT EXISTS pending_index_ops(path TEXT PRIMARY KEY,display_path TEXT NOT NULL);
-            CREATE TABLE IF NOT EXISTS state(key TEXT PRIMARY KEY,value TEXT NOT NULL);")?;
+            CREATE TABLE IF NOT EXISTS state(key TEXT PRIMARY KEY,value TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS ocr_pages(path TEXT NOT NULL,page INTEGER NOT NULL,text_offset INTEGER NOT NULL,text_length INTEGER NOT NULL,PRIMARY KEY(path,page));
+            CREATE TABLE IF NOT EXISTS ocr_errors(path TEXT PRIMARY KEY,message TEXT NOT NULL);")?;
         Ok(Self { conn })
     }
     pub fn all_files(&self) -> Result<HashMap<String, FileMeta>> {
@@ -226,11 +254,15 @@ impl MetaDb {
             tx.execute("DELETE FROM files WHERE path=?1", params![path])?;
             tx.execute("DELETE FROM contents WHERE path=?1", params![path])?;
             tx.execute("DELETE FROM pending_index_ops WHERE path=?1", params![path])?;
+            tx.execute("DELETE FROM ocr_pages WHERE path=?1", params![path])?;
+            tx.execute("DELETE FROM ocr_errors WHERE path=?1", params![path])?;
         }
         for (m, content) in records {
             tx.execute("INSERT INTO files VALUES(?1,?2,?3,?4,?5,?6,?7,?8) ON CONFLICT(path) DO UPDATE SET display_path=excluded.display_path,size=excluded.size,mtime=excluded.mtime,mtime_ns=excluded.mtime_ns,ext=excluded.ext,status=excluded.status,indexed_at=excluded.indexed_at",
                 params![m.path,m.display_path,m.size,m.mtime,m.mtime_ns,m.ext,m.status,now()])?;
             if let Some(content) = content {
+                tx.execute("DELETE FROM ocr_pages WHERE path=?1", params![m.path])?;
+                tx.execute("DELETE FROM ocr_errors WHERE path=?1", params![m.path])?;
                 tx.execute(
                     "INSERT OR REPLACE INTO contents VALUES(?1,?2)",
                     params![m.path, content],
@@ -238,6 +270,8 @@ impl MetaDb {
             }
             if m.status == 3 {
                 tx.execute("DELETE FROM contents WHERE path=?1", params![m.path])?;
+                tx.execute("DELETE FROM ocr_pages WHERE path=?1", params![m.path])?;
+                tx.execute("DELETE FROM ocr_errors WHERE path=?1", params![m.path])?;
             }
             if content.is_some() || m.status == 3 {
                 tx.execute(
@@ -290,6 +324,115 @@ impl MetaDb {
             Some(b) => Ok(String::from_utf8(zstd::decode_all(b.as_slice())?)?),
             None => Ok(String::new()),
         }
+    }
+    pub fn file(&self, path: &str) -> Result<Option<FileMeta>> {
+        self.conn
+            .query_row(
+                "SELECT path,display_path,size,mtime,mtime_ns,ext,status FROM files WHERE path=?1",
+                params![path],
+                |r| {
+                    Ok(FileMeta {
+                        path: r.get(0)?,
+                        display_path: r.get(1)?,
+                        size: r.get(2)?,
+                        mtime: r.get(3)?,
+                        mtime_ns: r.get(4)?,
+                        ext: r.get(5)?,
+                        status: r.get(6)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+    pub fn next_ocr_file(&self, config: &crate::config::Config) -> Result<Option<FileMeta>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT path,display_path,size,mtime,mtime_ns,ext,status FROM files
+             WHERE status=2 AND ((ext='pdf' AND ?1) OR (ext!='pdf' AND ?2))
+             ORDER BY indexed_at,path LIMIT 1"
+        )?;
+        stmt.query_row(params![config.ocr_pdf, config.ocr_images], |r| {
+            Ok(FileMeta {
+                path: r.get(0)?,
+                display_path: r.get(1)?,
+                size: r.get(2)?,
+                mtime: r.get(3)?,
+                mtime_ns: r.get(4)?,
+                ext: r.get(5)?,
+                status: r.get(6)?,
+            })
+        })
+        .optional()
+        .map_err(Into::into)
+    }
+    pub fn finish_ocr_success(
+        &mut self,
+        path: &str,
+        content: &str,
+        pages: &[(u32, usize, usize)],
+    ) -> Result<()> {
+        let compressed = zstd::encode_all(content.as_bytes(), 1)?;
+        let tx = self.conn.transaction()?;
+        tx.execute(
+            "UPDATE files SET status=0,indexed_at=?2 WHERE path=?1",
+            params![path, now()],
+        )?;
+        tx.execute(
+            "INSERT OR REPLACE INTO contents VALUES(?1,?2)",
+            params![path, compressed],
+        )?;
+        tx.execute("DELETE FROM ocr_pages WHERE path=?1", params![path])?;
+        for (page, offset, length) in pages {
+            tx.execute(
+                "INSERT INTO ocr_pages VALUES(?1,?2,?3,?4)",
+                params![path, page, offset, length],
+            )?;
+        }
+        tx.execute("DELETE FROM ocr_errors WHERE path=?1", params![path])?;
+        tx.execute("DELETE FROM pending_index_ops WHERE path=?1", params![path])?;
+        tx.execute(
+            "DELETE FROM state WHERE key='dirty' AND NOT EXISTS(SELECT 1 FROM pending_index_ops)",
+            [],
+        )?;
+        tx.commit()?;
+        Ok(())
+    }
+    pub fn finish_ocr_failure(&self, path: &str, message: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE files SET status=4 WHERE path=?1 AND status=2",
+            params![path],
+        )?;
+        self.conn.execute(
+            "INSERT OR REPLACE INTO ocr_errors VALUES(?1,?2)",
+            params![path, message],
+        )?;
+        Ok(())
+    }
+    pub fn retry_ocr_failures(&self) -> Result<()> {
+        self.conn
+            .execute("UPDATE files SET status=2 WHERE status=4", [])?;
+        self.conn.execute("DELETE FROM ocr_errors", [])?;
+        Ok(())
+    }
+    pub fn queue_pdf_ocr(&self) -> Result<()> {
+        self.conn.execute("UPDATE files SET status=2 WHERE ext='pdf' AND status=0 AND NOT EXISTS (SELECT 1 FROM ocr_pages WHERE ocr_pages.path=files.path)", [])?;
+        Ok(())
+    }
+    pub fn ocr_counts(&self) -> Result<(u64, u64)> {
+        self.conn.query_row(
+            "SELECT COUNT(*) FILTER (WHERE status=2),COUNT(*) FILTER (WHERE status=4) FROM files",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        ).map_err(Into::into)
+    }
+    pub fn ocr_pages(&self, path: &str) -> Result<Vec<(u32, usize, usize)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT page,text_offset,text_length FROM ocr_pages WHERE path=?1 ORDER BY page",
+        )?;
+        let pages = stmt
+            .query_map(params![path], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(pages)
     }
     pub fn roots(&self) -> Result<Vec<Root>> {
         let mut stmt = self

@@ -226,6 +226,10 @@ public sealed partial class SettingsWindow : Window
             MaxFileSizeBox.Value = config.MaxFileSizeMb;
             SkipDirectoriesBox.Text = string.Join(Environment.NewLine, config.SkipDirs ?? []);
             DictionaryBox.Text = config.UserDictionary;
+            OcrEnabledSwitch.IsOn = config.OcrEnabled;
+            OcrImagesCheckBox.IsChecked = config.OcrImages;
+            OcrPdfCheckBox.IsChecked = config.OcrPdf;
+            OcrMaxPagesBox.Value = config.OcrMaxPages;
             _paused = config.Paused;
             CloseToTraySwitch.IsOn = UserPreferences.CloseToTray;
             CurrentDataDirectoryText.Text = AppPaths.DataDirectory;
@@ -255,6 +259,7 @@ public sealed partial class SettingsWindow : Window
             string.Equals(root.Path, selected, StringComparison.OrdinalIgnoreCase)) ?? roots.Roots.FirstOrDefault();
         _paused = stats.Paused;
         StatisticsText.Text = $"{stats.Roots:N0} 个文件夹 · {stats.TotalDocs:N0} 个文档 · {stats.FailedDocs:N0} 个提取失败 · 索引 {Formatting.Bytes(stats.IndexSizeBytes)}";
+        OcrStateText.Text = $"待识别 {stats.OcrPending:N0} 个 · 失败 {stats.OcrFailed:N0} 个";
         VersionText.Text = $"RustSearch {stats.Version}";
         IndexStateText.Text = _paused ? "索引已暂停" : stats.Indexing ? "正在建立索引" : "索引已就绪";
         UpdateRootActions();
@@ -356,17 +361,33 @@ public sealed partial class SettingsWindow : Window
                 throw new ArgumentException("忽略目录必须是文件夹名称，不能包含路径分隔符。");
             if (Encoding.UTF8.GetByteCount(DictionaryBox.Text) > 1024 * 1024)
                 throw new ArgumentException("自定义分词词典不能超过 1 MB。");
+            var ocrPages = OcrMaxPagesBox.Value;
+            if (!double.IsFinite(ocrPages) || ocrPages < 1 || ocrPages > 500 || ocrPages != Math.Truncate(ocrPages))
+                throw new ArgumentException("PDF 识别页数必须为 1 到 500 的整数。");
             await CallAsync<AppConfig>("config.set", new
             {
                 max_file_size_mb = (int)size,
                 skip_dirs = skip,
-                user_dictionary = DictionaryBox.Text
+                user_dictionary = DictionaryBox.Text,
+                ocr_enabled = OcrEnabledSwitch.IsOn,
+                ocr_images = OcrImagesCheckBox.IsChecked == true,
+                ocr_pdf = OcrPdfCheckBox.IsChecked == true,
+                ocr_max_pages = (int)ocrPages
             });
             UserPreferences.CloseToTray = CloseToTraySwitch.IsOn;
             UserPreferences.Save();
             await RefreshIndexAsync();
             await RefreshMainAsync();
         }, "设置已保存，已安排索引更新。");
+    }
+
+    private async void RetryOcr_Click(object sender, RoutedEventArgs args)
+    {
+        await RunOperationAsync("正在安排文字识别重试", async () =>
+        {
+            await CallAsync<JsonElement>("ocr.retry_failed");
+            await RefreshIndexAsync();
+        }, "已安排失败文件重新识别。");
     }
 
     private void Theme_SelectionChanged(object sender, SelectionChangedEventArgs args)
@@ -632,7 +653,7 @@ public sealed partial class SettingsWindow : Window
 
     private void HandleEvent(string eventName, JsonElement data)
     {
-        if (eventName is not ("index.finished" or "watcher.change" or "index.progress")) return;
+        if (eventName is not ("index.finished" or "watcher.change" or "index.progress" or "ocr.finished" or "ocr.failed")) return;
         DispatcherQueue.TryEnqueue(async () =>
         {
             if (_closed || _shutdownRequested || IsBusy) return;

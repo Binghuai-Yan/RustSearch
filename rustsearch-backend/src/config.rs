@@ -12,6 +12,10 @@ pub struct Config {
     pub skip_dirs: Vec<String>,
     pub user_dictionary: String,
     pub paused: bool,
+    pub ocr_enabled: bool,
+    pub ocr_images: bool,
+    pub ocr_pdf: bool,
+    pub ocr_max_pages: u32,
 }
 impl Default for Config {
     fn default() -> Self {
@@ -32,6 +36,10 @@ impl Default for Config {
             .collect(),
             user_dictionary: String::new(),
             paused: false,
+            ocr_enabled: false,
+            ocr_images: true,
+            ocr_pdf: true,
+            ocr_max_pages: 100,
         }
     }
 }
@@ -64,6 +72,9 @@ impl Config {
         }
         if self.user_dictionary.len() > 1024 * 1024 {
             bail!("user dictionary exceeds 1 MB");
+        }
+        if !(1..=500).contains(&self.ocr_max_pages) {
+            bail!("ocr_max_pages must be between 1 and 500");
         }
         Ok(())
     }

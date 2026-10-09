@@ -342,7 +342,13 @@ fn scan_impl(
                         records.push((meta, None));
                         continue;
                     }
-                    meta.status = if result.needs_ocr { 2 } else { 0 };
+                    meta.status = if result.needs_ocr
+                        || (meta.ext == "pdf" && config.ocr_enabled && config.ocr_pdf)
+                    {
+                        2
+                    } else {
+                        0
+                    };
                     if old.contains_key(&meta.path) || pending.contains_key(&meta.path) {
                         writer.delete_term(Term::from_field_text(engine.fields.path, &meta.path));
                     }

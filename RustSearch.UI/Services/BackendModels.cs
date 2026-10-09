@@ -3,22 +3,25 @@ using System.Text.Json.Serialization;
 namespace RustSearch.UI.Services;
 
 public sealed record AppStats(int TotalDocs = 0, int FailedDocs = 0, int Roots = 0,
-    bool Indexing = false, bool Paused = false, long IndexSizeBytes = 0, string Version = "0.1.0");
+    bool Indexing = false, bool Paused = false, long IndexSizeBytes = 0, string Version = "0.1.0",
+    int OcrPending = 0, int OcrFailed = 0);
 public sealed record IndexedRoot(string Path, long AddedAt = 0, int TotalDocs = 0);
 public sealed record RootsResult(List<IndexedRoot> Roots);
 public sealed record SearchResponse(long TotalHits, long ElapsedMs, List<SearchHit> Hits, int Page = 0, int PageSize = 50);
 public sealed record SearchHit(string Path, string Filename, string FilenameHl, string Ext, long Size,
-    long Mtime, double Score, List<string> Snippets)
+    long Mtime, double Score, List<string> Snippets, int? OcrPage = null)
 {
     [JsonIgnore] public string SnippetText => string.Join("\n", Snippets ?? []);
     [JsonIgnore] public string SizeText => Formatting.Bytes(Size);
     [JsonIgnore] public string DateText => Formatting.Date(Mtime);
-    [JsonIgnore] public string ExtensionText => Ext.ToUpperInvariant();
+    [JsonIgnore] public string ExtensionText => OcrPage is { } page ? $"{Ext.ToUpperInvariant()} · 第 {page} 页" : Ext.ToUpperInvariant();
 }
 public sealed record PreviewResponse(string Path, string Text, string? Title = null,
-    bool Truncated = false, bool NeedsOcr = false);
+    bool Truncated = false, bool NeedsOcr = false, List<OcrPageRange>? OcrPages = null);
+public sealed record OcrPageRange(int Page, int Offset, int Length);
 public sealed record AppConfig(int MaxFileSizeMb = 200, List<string>? SkipDirs = null,
-    string UserDictionary = "", bool Paused = false);
+    string UserDictionary = "", bool Paused = false, bool OcrEnabled = false,
+    bool OcrImages = true, bool OcrPdf = true, int OcrMaxPages = 100);
 public sealed record SearchHistory(List<string> Queries);
 public sealed record FilterOption(string Label, string[] Extensions)
 {

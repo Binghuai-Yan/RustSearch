@@ -27,6 +27,11 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
     [ObservableProperty] private int _maxFileSizeMb = 200;
     [ObservableProperty] private string _skipDirectories = "";
     [ObservableProperty] private string _userDictionary = "";
+    [ObservableProperty] private bool _ocrEnabled;
+    [ObservableProperty] private bool _ocrImages = true;
+    [ObservableProperty] private bool _ocrPdf = true;
+    [ObservableProperty] private int _ocrMaxPages = 100;
+    [ObservableProperty] private string _ocrState = "";
     [ObservableProperty] private bool _paused;
     [ObservableProperty] private bool _closeToTray = true;
     [ObservableProperty] private string _pauseButtonText = "暂停索引";
@@ -56,6 +61,10 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
             MaxFileSizeMb = config.MaxFileSizeMb;
             SkipDirectories = string.Join(Environment.NewLine, config.SkipDirs ?? []);
             UserDictionary = config.UserDictionary;
+            OcrEnabled = config.OcrEnabled;
+            OcrImages = config.OcrImages;
+            OcrPdf = config.OcrPdf;
+            OcrMaxPages = config.OcrMaxPages;
             Paused = config.Paused;
             CloseToTray = UserPreferences.CloseToTray;
             DataDirectory = AppPaths.DataDirectory;
@@ -78,6 +87,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
             SelectedRoot = Roots.FirstOrDefault(x => x.Path == selected) ?? Roots.FirstOrDefault();
             var stats = await rpc.CallAsync<AppStats>("app.stats");
             Statistics = $"{stats.TotalDocs:N0} 个文档 · {stats.FailedDocs:N0} 个提取失败 · 索引 {Formatting.Bytes(stats.IndexSizeBytes)}";
+            OcrState = $"待识别 {stats.OcrPending:N0} 个 · 失败 {stats.OcrFailed:N0} 个";
             Version = stats.Version;
             Paused = stats.Paused;
         }
@@ -194,11 +204,22 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
                 max_file_size_mb = MaxFileSizeMb,
                 skip_dirs = skip,
                 user_dictionary = UserDictionary,
-                paused = Paused
+                paused = Paused,
+                ocr_enabled = OcrEnabled,
+                ocr_images = OcrImages,
+                ocr_pdf = OcrPdf,
+                ocr_max_pages = OcrMaxPages
             });
             UserPreferences.CloseToTray = CloseToTray;
             UserPreferences.Save();
         }, "设置已保存；词典变更已安排重新索引");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanEdit))]
+    private async Task RetryOcrAsync()
+    {
+        await RunOperationAsync("正在安排识别重试", async () =>
+            await rpc.CallAsync<JsonElement>("ocr.retry_failed"), "已安排失败文件重新识别");
     }
 
     [RelayCommand]

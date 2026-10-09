@@ -71,6 +71,58 @@ fn chinese_pdf(path: &Path) {
     document.save(path).unwrap();
 }
 
+fn scanned_pdf(path: &Path, image_path: &Path) {
+    let pixels = image::open(image_path).unwrap().to_rgb8();
+    let (width, height) = pixels.dimensions();
+    let mut document = Document::with_version("1.5");
+    let pages_id = document.new_object_id();
+    let image_id = document.add_object(Stream::new(
+        dictionary! {
+            "Type" => "XObject", "Subtype" => "Image", "Width" => width as i64,
+            "Height" => height as i64, "ColorSpace" => "DeviceRGB", "BitsPerComponent" => 8
+        },
+        pixels.into_raw(),
+    ));
+    let resources_id =
+        document.add_object(dictionary! { "XObject" => dictionary! { "Image1" => image_id } });
+    let content_id = document.add_object(Stream::new(
+        dictionary! {},
+        Content {
+            operations: vec![
+                Operation::new("q", vec![]),
+                Operation::new(
+                    "cm",
+                    vec![
+                        width.into(),
+                        0.into(),
+                        0.into(),
+                        height.into(),
+                        0.into(),
+                        0.into(),
+                    ],
+                ),
+                Operation::new("Do", vec![Object::Name(b"Image1".to_vec())]),
+                Operation::new("Q", vec![]),
+            ],
+        }
+        .encode()
+        .unwrap(),
+    ));
+    let page_id = document.add_object(dictionary! {
+        "Type" => "Page", "Parent" => pages_id, "Contents" => content_id,
+        "Resources" => resources_id, "MediaBox" => vec![0.into(),0.into(),width.into(),height.into()]
+    });
+    document.objects.insert(
+        pages_id,
+        Object::Dictionary(dictionary! {
+            "Type" => "Pages", "Kids" => vec![Object::Reference(page_id)], "Count" => 1
+        }),
+    );
+    let catalog_id = document.add_object(dictionary! { "Type" => "Catalog", "Pages" => pages_id });
+    document.trailer.set("Root", catalog_id);
+    document.save(path).unwrap();
+}
+
 struct ProcessGuard(Child);
 
 impl ProcessGuard {
@@ -254,5 +306,70 @@ fn pdf_index_search_and_preview_keep_stdout_json_only() {
     let preview = backend.call(3, "doc.preview", json!({"path":path}));
     assert!(preview["text"].as_str().unwrap().contains(CHINESE));
     assert_eq!(preview["needs_ocr"], false);
+    backend.shutdown();
+}
+
+#[test]
+fn offline_ocr_indexes_chinese_image_and_scanned_pdf() {
+    if std::env::var_os("RUSTSEARCH_OCR_RUNTIME_DIR").is_none() {
+        eprintln!("OCR runtime is not configured; skipping packaged-engine integration test");
+        return;
+    }
+    let fixture = tempfile::tempdir().unwrap();
+    let root = fixture.path().join("documents");
+    std::fs::create_dir(&root).unwrap();
+    let image_path = root.join("scan.png");
+    std::fs::write(&image_path, include_bytes!("fixtures/ocr-chinese.png")).unwrap();
+    std::fs::write(root.join("notes.txt"), "即时检索").unwrap();
+    let pdf_path = root.join("scan.pdf");
+    scanned_pdf(&pdf_path, &image_path);
+    let mut backend = IpcProcess::start(&fixture.path().join("data"));
+    backend.receive_until(|message| {
+        message["event"] == "index.finished" && message["data"]["root"] == ""
+    });
+    backend.call(1, "config.set", json!({"ocr_enabled":true}));
+    backend.call(2, "index.add_root", json!({"path":root}));
+    backend.receive_until(|message| {
+        message["event"] == "index.finished"
+            && message["data"]["root"]
+                .as_str()
+                .is_some_and(|p| p.ends_with("documents"))
+    });
+    let search_started = Instant::now();
+    let immediate = backend.call(6, "search.query", json!({"query":"即时检索"}));
+    assert_eq!(immediate["total_hits"], 1);
+    assert!(search_started.elapsed() < Duration::from_secs(2));
+    backend.receive_until(|message| {
+        message["event"] == "ocr.finished"
+            && message["data"]["path"]
+                .as_str()
+                .is_some_and(|p| p.ends_with("scan.png"))
+    });
+    backend.receive_until(|message| {
+        message["event"] == "ocr.finished"
+            && message["data"]["path"]
+                .as_str()
+                .is_some_and(|p| p.ends_with("scan.pdf"))
+    });
+    let hits = backend.call(3, "search.query", json!({"query":"采购合同"}));
+    assert_eq!(hits["total_hits"], 2, "{hits}");
+    let preview = backend.call(4, "doc.preview", json!({"path":pdf_path}));
+    assert!(preview["text"].as_str().unwrap().contains("采购合同"));
+    assert_eq!(preview["ocr_pages"][0]["page"], 1);
+    let stats = backend.call(5, "app.stats", json!({}));
+    assert_eq!(stats["ocr_pending"], 0);
+    assert_eq!(stats["ocr_failed"], 0);
+    image::RgbImage::from_pixel(1000, 180, image::Rgb([255, 255, 255]))
+        .save(&image_path)
+        .unwrap();
+    backend.receive_until(|message| {
+        message["event"] == "ocr.finished"
+            && message["data"]["path"]
+                .as_str()
+                .is_some_and(|p| p.ends_with("scan.png"))
+            && message["data"]["pages"] == 0
+    });
+    let updated = backend.call(7, "search.query", json!({"query":"采购合同"}));
+    assert_eq!(updated["total_hits"], 1, "{updated}");
     backend.shutdown();
 }

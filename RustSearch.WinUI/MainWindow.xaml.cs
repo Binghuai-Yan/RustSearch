@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using RustSearch.UI.Services;
 using Windows.ApplicationModel.DataTransfer;
 
@@ -66,7 +67,8 @@ public sealed partial class MainWindow : Window
             new("Office", ["docx", "xlsx", "xls", "xlsb", "pptx"]),
             new("文本", ["txt", "md", "log", "csv", "json", "xml", "yaml", "yml", "ini"]),
             new("代码", ["rs", "py", "js", "ts", "tsx", "jsx", "cs", "c", "cpp", "h", "java", "go", "sql", "html", "css"]),
-            new("EPUB", ["epub"])
+            new("EPUB", ["epub"]),
+            new("图片", ["png", "jpg", "jpeg", "bmp", "tif", "tiff"])
         };
         SortFilter.ItemsSource = new SortOption[]
         {
@@ -287,6 +289,8 @@ public sealed partial class MainWindow : Window
         _previewCancellation?.Cancel();
         _previewCancellation = null;
         _preview = "";
+        PreviewImage.Source = null;
+        PreviewImage.Visibility = Visibility.Collapsed;
         PreviewText.Text = "";
         PreviewText.TextHighlighters.Clear();
         PreviewTitle.Text = hit?.Filename ?? "文件预览";
@@ -299,6 +303,15 @@ public sealed partial class MainWindow : Window
         FileActions.IsEnabled = hit is not null;
         PreviewScroller.ChangeView(null, 0, null, true);
         if (hit is null || _closing) return;
+        if (hit.Ext is "png" or "jpg" or "jpeg" or "bmp" or "tif" or "tiff")
+        {
+            try
+            {
+                PreviewImage.Source = new BitmapImage(new Uri(hit.Path)) { DecodePixelWidth = 1200 };
+                PreviewImage.Visibility = Visibility.Visible;
+            }
+            catch (Exception ex) { PreviewStatus.Text = ErrorText(ex); }
+        }
         var cancellation = new CancellationTokenSource();
         _previewCancellation = cancellation;
         try
@@ -312,7 +325,7 @@ public sealed partial class MainWindow : Window
             if (length < response.Text.Length && length > 0 && char.IsHighSurrogate(response.Text[length - 1])) length--;
             _preview = response.Text[..length];
             ScrollPreviewToMatch(HighlightText.Preview(PreviewText, _preview, QueryBox.Text));
-            PreviewStatus.Text = response.NeedsOcr ? "此文件没有可提取的文本层" :
+            PreviewStatus.Text = response.NeedsOcr ? "等待后台文字识别" :
                 response.Truncated || response.Text.Length > limit ? "预览已截断" :
                 string.IsNullOrWhiteSpace(_preview) ? "文件没有文本内容" : "";
             PreviewStatus.Visibility = PreviewStatus.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;

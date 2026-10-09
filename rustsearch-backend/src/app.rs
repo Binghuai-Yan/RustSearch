@@ -62,9 +62,11 @@ impl App {
         match method {
             "app.stats" | "index.status" => {
                 let meta = engine.meta.lock().unwrap();
+                let (ocr_pending, ocr_failed) = meta.ocr_counts().map_err(internal)?;
                 Ok(
                     json!({"version":option_env!("RUSTSEARCH_VERSION").unwrap_or(env!("CARGO_PKG_VERSION")),"total_docs":engine.reader.searcher().num_docs(),"failed_docs":meta.failed_count().map_err(internal)?,
-                    "roots":meta.root_paths().map_err(internal)?.len(),"indexing":engine.indexing.load(Ordering::SeqCst),"paused":engine.paused(),"index_size_bytes":directory_size(&engine.data_dir)}),
+                    "roots":meta.root_paths().map_err(internal)?.len(),"indexing":engine.indexing.load(Ordering::SeqCst),"paused":engine.paused(),"index_size_bytes":directory_size(&engine.data_dir),
+                    "ocr_pending":ocr_pending,"ocr_failed":ocr_failed}),
                 )
             }
             "index.list_roots" => {
@@ -210,11 +212,49 @@ impl App {
                         "File exceeds configured size limit".into(),
                     ));
                 }
+                let key = path_utils::key(&path);
+                let cached = {
+                    let meta = engine.meta.lock().unwrap();
+                    meta.file(&key).map_err(internal)?.and_then(|file| {
+                        let current = std::fs::metadata(&path).ok()?;
+                        let modified = current
+                            .modified()
+                            .ok()?
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .ok()?;
+                        if file.size == current.len() && file.mtime_ns == modified.as_nanos() as i64
+                        {
+                            Some((
+                                meta.content(&key).ok()?,
+                                meta.ocr_pages(&key).ok()?,
+                                file.status,
+                            ))
+                        } else {
+                            None
+                        }
+                    })
+                };
+                if let Some((text, pages, status)) = cached {
+                    return Ok(
+                        json!({"path":path_utils::display_path(&path),"text":text,"truncated":false,
+                        "needs_ocr":status==2,"ocr_pages":pages.iter().map(|(page,offset,length)|
+                            json!({"page":page,"offset":offset,"length":length})).collect::<Vec<_>>() }),
+                    );
+                }
                 let result = builder::extract_file(&path)
                     .map_err(|e| ("EXTRACT_FAILED", format!("{e:#}")))?;
                 Ok(
                     json!({"path":path_utils::display_path(&path),"text":result.text,"title":result.title,"truncated":result.truncated,"needs_ocr":result.needs_ocr}),
                 )
+            }
+            "ocr.retry_failed" => {
+                engine
+                    .meta
+                    .lock()
+                    .unwrap()
+                    .retry_ocr_failures()
+                    .map_err(internal)?;
+                Ok(json!({"queued":true}))
             }
             "config.get" => serde_json::to_value(&*engine.config.lock().unwrap()).map_err(internal),
             "config.set" => {
@@ -229,12 +269,32 @@ impl App {
                     .patch(value)
                     .map_err(|e| ("INVALID_PARAMS", e.to_string()))?;
                 let dictionary_changed = next.user_dictionary != config.user_dictionary;
+                let ocr_changed = next.ocr_enabled != config.ocr_enabled
+                    || next.ocr_images != config.ocr_images
+                    || next.ocr_pdf != config.ocr_pdf
+                    || next.ocr_max_pages != config.ocr_max_pages;
                 tokenizer::MixedTokenizer::new(&next.user_dictionary)
                     .map_err(|e| ("INVALID_PARAMS", e.to_string()))?;
                 next.save(&engine.data_dir).map_err(internal)?;
                 tokenizer::register(&engine.index, &next.user_dictionary).map_err(internal)?;
                 *config = next.clone();
                 drop(config);
+                if ocr_changed {
+                    engine
+                        .meta
+                        .lock()
+                        .unwrap()
+                        .retry_ocr_failures()
+                        .map_err(internal)?;
+                    if next.ocr_enabled && next.ocr_pdf {
+                        engine
+                            .meta
+                            .lock()
+                            .unwrap()
+                            .queue_pdf_ocr()
+                            .map_err(internal)?;
+                    }
+                }
                 engine.cache.lock().unwrap().clear();
                 self.schedule(None, dictionary_changed)?;
                 serde_json::to_value(next).map_err(internal)

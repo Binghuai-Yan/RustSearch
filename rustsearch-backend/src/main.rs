@@ -3,6 +3,7 @@ mod config;
 mod extract;
 mod index;
 mod ipc;
+mod ocr;
 mod path_utils;
 mod query;
 mod uninstall;
@@ -63,6 +64,9 @@ fn main() -> anyhow::Result<()> {
             }
         }
     }
+    if std::env::args_os().nth(1).is_some_and(|a| a == "--ocr-one") {
+        return ocr::run_child();
+    }
     rayon::ThreadPoolBuilder::new()
         .num_threads(std::thread::available_parallelism().map_or(2, |n| n.get().min(8)))
         .build_global()?;
@@ -75,6 +79,7 @@ fn main() -> anyhow::Result<()> {
     };
     let index_worker = app::worker(engine.clone(), rx);
     let watcher = watcher::start(engine.clone());
+    let ocr_worker = ocr::start(engine.clone());
     app.jobs.send(app::Job::Scan {
         root: None,
         force: false,
@@ -151,6 +156,7 @@ fn main() -> anyhow::Result<()> {
     engine.shutdown.store(true, Ordering::SeqCst);
     let _ = index_worker.join();
     let _ = watcher.join();
+    let _ = ocr_worker.join();
     if let Some(id) = shutdown_id {
         out.send(&Response::success(id, json!({"shutdown":true})));
     }
