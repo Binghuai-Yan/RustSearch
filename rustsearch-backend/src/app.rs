@@ -44,11 +44,18 @@ impl App {
     }
     fn schedule_root(&self, root: String) -> std::result::Result<(), (&'static str, String)> {
         self.jobs
-            .send(Job::Scan {
+            .try_send(Job::Scan {
                 root: Some(root),
                 force: false,
             })
-            .map_err(|_| ("INTERNAL_ERROR", "Index worker is unavailable".into()))
+            .map_err(|error| match error {
+                crossbeam_channel::TrySendError::Full(_) => {
+                    ("INDEX_BUSY", "Index queue is full".into())
+                }
+                crossbeam_channel::TrySendError::Disconnected(_) => {
+                    ("INTERNAL_ERROR", "Index worker is unavailable".into())
+                }
+            })
     }
     fn handle(&self, method: &str, value: Value) -> RpcResult {
         let engine = &self.engine;
@@ -75,7 +82,7 @@ impl App {
                     return Err(("INVALID_PARAMS", "Cannot index application data".into()));
                 }
                 let display = path_utils::display_path(&root);
-                engine
+                let inserted = engine
                     .meta
                     .lock()
                     .unwrap()
@@ -87,7 +94,9 @@ impl App {
                 if let Err(error) = self.schedule_root(display.clone()) {
                     // Do not leave a root registered when the worker has gone away or the
                     // queue is unavailable. A later retry can then register it cleanly.
-                    let _ = engine.meta.lock().unwrap().remove_root(&key, &[]);
+                    if inserted {
+                        let _ = engine.meta.lock().unwrap().remove_root(&key, &[]);
+                    }
                     return Err(error);
                 }
                 Ok(json!({"root":display}))

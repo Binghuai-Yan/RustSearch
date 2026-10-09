@@ -122,16 +122,20 @@ function Capture-SettingsPages([string]$Theme, [string]$Size) {
 
 $executablePath = (Resolve-Path -LiteralPath $Executable).Path
 $backendPath = (Resolve-Path -LiteralPath (Join-Path (Split-Path -Parent $executablePath) 'Backend\rustsearch-backend.exe')).Path
-$testDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ('RustSearch-winui-visual-'+[guid]::NewGuid().ToString('N'))
+$testDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ('RS-demo-'+[guid]::NewGuid().ToString('N').Substring(0,8))
 $fixtureDirectory = Join-Path $testDirectory 'documents'
 $dataDirectory = Join-Path $testDirectory 'data'
 New-Item -ItemType Directory -Path $fixtureDirectory,$dataDirectory,$OutputDirectory -Force | Out-Null
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $fixtureText = '甲方与乙方签订采购合同。'
+$titles = @('设备采购合同','软件服务合同','办公室租赁合同','年度维保合同',
+    '项目合作协议','供应商框架协议','技术支持记录','交付验收清单',
+    '采购审批说明','合同归档须知','付款计划备忘','项目交接记录')
 for ($i=1; $i -le 12; $i++) {
     $extension = if ($i -le 8) { 'txt' } else { 'md' }
-    $filename = '采购合同-{0:D2}.{1}' -f $i,$extension
-    $text = "采购合同`n`n$fixtureText`n采购项目：办公设备及相关服务。`n合同金额：人民币 128,000 元。`n履约期限：2026 年 9 月 1 日至 2026 年 12 月 31 日。`n`n双方确认交付范围、付款条件和验收标准后，本合同生效。"
+    $filename = '{0}.{1}' -f $titles[$i-1],$extension
+    $heading = if ($extension -eq 'md') { '# ' } else { '' }
+    $text = "$heading$($titles[$i-1])`n`n$fixtureText`n采购项目：办公设备及相关服务。`n合同金额：人民币 128,000 元。`n履约期限：2026 年 9 月 1 日至 2026 年 12 月 31 日。`n`n双方确认交付范围、付款条件和验收标准后，本合同生效。"
     [System.IO.File]::WriteAllText((Join-Path $fixtureDirectory $filename),$text,$utf8)
 }
 $script:app = $null

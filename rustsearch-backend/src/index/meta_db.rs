@@ -126,6 +126,16 @@ mod tests {
     }
 
     #[test]
+    fn adding_existing_root_reports_no_insert() {
+        let fixture = Fixture::new();
+        let db = MetaDb::open(&fixture.0).unwrap();
+        let root = "c:\\docs";
+        assert!(db.add_root(root, root).unwrap());
+        assert!(!db.add_root(root, root).unwrap());
+        assert_eq!(db.root_paths().unwrap(), vec![root]);
+    }
+
+    #[test]
     fn root_count_requires_a_committed_content_record() {
         let fixture = Fixture::new();
         let mut db = MetaDb::open(&fixture.0).unwrap();
@@ -310,12 +320,12 @@ impl MetaDb {
             })
             .collect())
     }
-    pub fn add_root(&self, key: &str, path: &str) -> Result<()> {
-        self.conn.execute(
+    pub fn add_root(&self, key: &str, path: &str) -> Result<bool> {
+        let inserted = self.conn.execute(
             "INSERT OR IGNORE INTO roots VALUES(?1,?2,?3)",
             params![key, path, now()],
         )?;
-        Ok(())
+        Ok(inserted != 0)
     }
     pub fn root_paths(&self) -> Result<Vec<String>> {
         let mut stmt = self

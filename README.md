@@ -14,7 +14,7 @@ RustSearch 是完全本地运行的 Windows 全文搜索工具。WinUI 3 前端�
 
 微信输入法在当前 WinUI 3 文本框中可能只显示拼音预编辑文字而不弹出候选窗。这是 WinUI 对旧式第三方输入法辅助界面的兼容问题；普通 WinUI 文本框也受影响。安装版可从开始菜单打开 **RustSearch 输入法兼容界面**，便携版运行 `Compat\RustSearch.UI.exe`。兼容界面使用 WPF，微信输入法候选窗可正常显示，搜索与索引数据和 WinUI 版共用。切换界面前请完全退出另一个版本，避免同时打开同一索引。
 
-![输入法兼容界面显示微信输入法候选词](docs/screenshots/wechat-ime-compat.png)
+微信输入法候选窗的[实测截图](https://github.com/Binghuai-Yan/RustSearch/blob/main/docs/screenshots/wechat-ime-compat.png)可单独查看。
 
 Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。发布包包含 .NET 和 Windows App SDK 运行时。
 
@@ -22,26 +22,34 @@ Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。发
 
 1. 启动后，点击主界面中间的“添加索引文件夹”，或点击左侧的文件夹加号图标。第一次打开时列表为空是正常的。
 
-   ![首次启动，添加索引文件夹入口](docs/screenshots/first-run.png)
-
 2. 在“索引文件夹”设置中，输入文件夹的完整路径，或点击路径框右侧的文件夹图标选择目录，再点击“添加”。建议先选一个常用文档目录；文件较多时可在这里看已索引文档数和进度。状态显示“索引已就绪”后即可搜索。需要更多目录时可以继续添加，不必等当前目录索引结束。移除目录只删除其搜索索引，不删除源文件。
 
    ![索引文件夹设置与索引状态](docs/screenshots/index-folders.png)
+
+   [单独查看索引文件夹截图](https://github.com/Binghuai-Yan/RustSearch/blob/main/docs/screenshots/index-folders.png)
 
 3. 回到搜索页，在顶部输入文件名或正文关键词，结果会自动更新，无需按回车。可用下拉框筛选类型和排序；单击结果在右侧预览并高亮关键词，双击结果用系统默认程序打开。结果右键菜单和预览上方图标可打开文件、打开所在文件夹或复制路径。拖动结果与预览之间的竖线可以调整两侧宽度；底部分页用于查看更多结果。
 
    ![搜索结果、关键词高亮与文件预览](docs/screenshots/main-light.png)
 
+   [单独查看搜索截图](https://github.com/Binghuai-Yan/RustSearch/blob/main/docs/screenshots/main-light.png)
+
 4. 左下角齿轮打开设置。“外观与行为”可切换浅色/深色主题和关闭窗口后的行为；“数据存储”可迁移现有索引与设置。切换数据目录时选择目标文件夹，保留勾选的“迁移当前索引和设置”，再点击“应用更改”。新目录验证成功后会清理原目录中的索引和已迁移配置，其他文件会保留。
 
    ![数据目录迁移设置](docs/screenshots/data-storage.png)
+
+   [单独查看数据存储截图](https://github.com/Binghuai-Yan/RustSearch/blob/main/docs/screenshots/data-storage.png)
+
+   ![浅色主题和关闭窗口行为设置](docs/screenshots/appearance.png)
+
+   [单独查看外观设置截图](https://github.com/Binghuai-Yan/RustSearch/blob/main/docs/screenshots/appearance.png)
 
 ## 功能
 
 - 中文和英文全文搜索，300 ms 防抖；文件类型筛选、相关度/时间/大小排序、分页及最近搜索历史。
 - 文件名、搜索片段和正文预览高亮；可拖动分隔条调整结果与预览宽度。
 - 添加、移除、重建索引目录，暂停/恢复索引，文件变化自动更新。后台索引期间保留当前搜索结果和选中项，手动刷新后展示新结果。
-- 浅色与深色主题、可选托盘驻留、自定义分词词典、忽略目录和最大文件大小设置。深色界面见[截图](docs/screenshots/main-dark.png)。
+- 浅色与深色主题、可选托盘驻留、自定义分词词典、忽略目录和最大文件大小设置。深色界面见[截图](https://github.com/Binghuai-Yan/RustSearch/blob/main/docs/screenshots/main-dark.png)。
 - 可迁移索引和设置到新的数据文件夹；验证成功后清理原目录中的已迁移数据。
 
 支持纯文本、Markdown、常见代码和配置文件、CSV、HTML、PDF、DOCX、XLSX/XLS/XLSB、PPTX、EPUB。文本编码包括 UTF-8、GBK/GB18030 和 UTF-16。默认跳过隐藏目录、`.gitignore` 忽略项、常见依赖/构建目录、Office 临时文件及超过 200 MB 的文件。扫描版 PDF 暂不支持 OCR，旧版 `.doc` 和 `.ppt` 暂不支持。
@@ -78,9 +86,9 @@ Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。发
 
 依赖缓存默认位于可用的 `E:\cache\RustSearch-Dependencies`，否则位于用户本地应用数据目录；也可用 `RUSTSEARCH_DEPENDENCY_CACHE_DIR` 指定。它与应用索引数据分离。单独执行 Cargo 或 dotnet 命令前，可运行 `. ./scripts/use-dependency-cache.ps1` 采用相同缓存路径。
 
-GitHub Actions 在 `main` 推送、拉取请求及手动触发时构建并上传 ZIP/EXE；推送 `v<版本>` 标签后，工作流还会创建 GitHub Release 并附上两个安装包。CI 跳过需要交互桌面的 UI 测试，本地发布前应运行完整桌面和安装器验收。
+GitHub Actions 在拉取请求中运行静态检查、Rust 测试及两个前端的编译；`main` 推送和手动触发时构建并上传 ZIP/EXE。推送 `v<版本>` 标签后，工作流使用 `docs/releases/v<版本>.md` 创建带详细更新记录的 GitHub Release，并附上两个安装包。CI 跳过需要交互桌面的 UI 测试，本地发布前应运行完整桌面和安装器验收。
 
-发布新版本时，先同步更新 `VERSION`、`rustsearch-backend/Cargo.toml` 和 `Cargo.lock` 中的版本并完成本地验收，再推送同版本的 `v<版本>` 标签。标签与 `VERSION` 不一致时，CI 会停止发布。
+发布新版本时，先同步更新 `VERSION`、`rustsearch-backend/Cargo.toml` 和 `Cargo.lock`，编写 `docs/releases/v<版本>.md`，完成本地验收，再推送同版本的标签。缺少详细更新记录或标签与 `VERSION` 不一致时，CI 会停止发布。[历史版本更新记录](docs/releases/v0.1.5.md)和[当前版本更新记录](docs/releases/v0.1.6.md)可在仓库查看。
 
 ## 架构与许可
 

@@ -1,5 +1,5 @@
 param(
-    [string]$Installer = (Join-Path $PSScriptRoot '..\dist\RustSearch-0.1.5-win-x64-setup.exe'),
+    [string]$Installer = (Join-Path $PSScriptRoot '..\dist\RustSearch-0.1.6-win-x64-setup.exe'),
     [string]$Published = (Join-Path $PSScriptRoot '..\dist\RustSearch')
 )
 

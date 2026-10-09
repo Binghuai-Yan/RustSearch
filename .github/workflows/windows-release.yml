@@ -8,7 +8,11 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: windows-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 jobs:
   windows:
@@ -35,6 +39,21 @@ jobs:
             ${{ runner.temp }}\RustSearch-Dependencies\cargo\git
             ${{ runner.temp }}\RustSearch-Dependencies\nuget\packages
           key: windows-deps-${{ hashFiles('rustsearch-backend/Cargo.lock', '**/*.csproj') }}
+          restore-keys: |
+            windows-deps-
+
+      - name: Check README images and release notes
+        run: |
+          ./scripts/check-readme-assets.ps1
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $notes = Join-Path 'docs/releases' "$env:GITHUB_REF_NAME.md"
+            if (-not (Test-Path -LiteralPath $notes -PathType Leaf)) {
+              throw "Detailed release notes are required: $notes"
+            }
+            if ((Get-Content -LiteralPath $notes -Raw).Trim().Length -lt 200) {
+              throw "Release notes are too short: $notes"
+            }
+          }
 
       - name: Check Rust formatting
         run: cargo fmt --manifest-path rustsearch-backend/Cargo.toml --all -- --check
@@ -46,7 +65,23 @@ jobs:
           . ./scripts/use-dependency-cache.ps1
           cargo clippy --manifest-path rustsearch-backend/Cargo.toml --all-targets --locked -- -D warnings
 
+      - name: Test Rust backend
+        env:
+          RUSTSEARCH_DEPENDENCY_CACHE_DIR: ${{ runner.temp }}\RustSearch-Dependencies
+        run: |
+          . ./scripts/use-dependency-cache.ps1
+          cargo test --manifest-path rustsearch-backend/Cargo.toml --locked
+
+      - name: Build frontends for pull requests
+        if: github.event_name == 'pull_request'
+        run: |
+          dotnet build RustSearch.WinUI/RustSearch.WinUI.csproj -c Release -p:Platform=x64
+          if ($LASTEXITCODE -ne 0) { throw 'WinUI build failed' }
+          dotnet build RustSearch.UI/RustSearch.UI.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'WPF build failed' }
+
       - name: Install Inno Setup
+        if: github.event_name != 'pull_request'
         run: |
           if (-not (Test-Path 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe') -and
               -not (Test-Path 'C:\Program Files\Inno Setup 6\ISCC.exe')) {
@@ -55,6 +90,7 @@ jobs:
           }
 
       - name: Build portable ZIP and installer
+        if: github.event_name != 'pull_request'
         env:
           RUSTSEARCH_DEPENDENCY_CACHE_DIR: ${{ runner.temp }}\RustSearch-Dependencies
         run: |
@@ -63,7 +99,7 @@ jobs:
             $tagVersion = $env:GITHUB_REF_NAME -replace '^v', ''
             if ($tagVersion -ne $version) { throw "Tag version $tagVersion does not match VERSION $version" }
           }
-          ./build.ps1 -Version $version -SkipUITests
+          ./build.ps1 -Version $version -SkipTests -SkipUITests
 
       - name: Verify third-party notices
         env:
@@ -75,6 +111,7 @@ jobs:
           ./scripts/generate-third-party-notices.ps1 -Check
 
       - name: Upload build artifacts
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7.0.2
         with:
           name: RustSearch-win-x64
@@ -83,12 +120,26 @@ jobs:
             dist/RustSearch-*-win-x64-setup.exe
           if-no-files-found: error
 
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: windows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/download-artifact@v7.0.0
+        with:
+          name: RustSearch-win-x64
+          path: dist
+
       - name: Publish tagged release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v3.0.3
         with:
           files: |
             dist/RustSearch-*-win-x64.zip
             dist/RustSearch-*-win-x64-setup.exe
           fail_on_unmatched_files: true
-          generate_release_notes: true
+          body_path: docs/releases/${{ github.ref_name }}.md
+          generate_release_notes: false

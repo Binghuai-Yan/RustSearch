@@ -8,6 +8,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+const RECONCILE_INTERVAL: Duration = Duration::from_secs(120);
+
 pub fn start(engine: Arc<Engine>) -> JoinHandle<()> {
     std::thread::spawn(move || {
         let (tx, rx) = crossbeam_channel::bounded(4096);
@@ -116,12 +118,12 @@ pub fn start(engine: Arc<Engine>) -> JoinHandle<()> {
                     .retry_needed
                     .load(std::sync::atomic::Ordering::Relaxed)
                     && last_reconcile.elapsed() >= Duration::from_secs(3))
-                || last_reconcile.elapsed() >= Duration::from_secs(30);
+                || last_reconcile.elapsed() >= RECONCILE_INTERVAL;
             if due && !engine.paused() && !engine.indexing.load(std::sync::atomic::Ordering::SeqCst)
             {
                 let result = if full_scan
                     || pending_paths.is_empty()
-                    || last_reconcile.elapsed() >= Duration::from_secs(30)
+                    || last_reconcile.elapsed() >= RECONCILE_INTERVAL
                 {
                     builder::scan(&engine, None, false, true)
                 } else {
