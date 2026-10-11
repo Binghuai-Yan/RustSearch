@@ -23,17 +23,29 @@ function Wait-Until([scriptblock]$Check, [string]$Description, [int]$Seconds = 3
     $deadline = [DateTime]::UtcNow.AddSeconds($Seconds)
     do {
         if ($script:app -and $script:app.HasExited) { throw "Application exited ($($script:app.ExitCode)): $Description" }
-        if (& $Check) { return }
+        try { if (& $Check) { return } }
+        catch [System.Windows.Automation.ElementNotAvailableException] { }
         Start-Sleep -Milliseconds 150
     } while ([DateTime]::UtcNow -lt $deadline)
     throw "Timed out: $Description"
 }
 function Find-Control($Scope, [string]$Id) {
+    if (!$Scope) { return $null }
     return $Scope.FindFirst([System.Windows.Automation.TreeScope]::Descendants,
         [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::AutomationIdProperty, $Id))
 }
-function Invoke-Control($Control) {
-    if (!$Control) { throw 'Missing UI control.' }
+function Get-Control([string]$Id) {
+    $found = [ref]$null
+    Wait-Until {
+        $script:app.Refresh()
+        $script:window = [System.Windows.Automation.AutomationElement]::FromHandle($script:app.MainWindowHandle)
+        $found.Value = Find-Control $script:window $Id
+        $found.Value -and $found.Value.Current.IsEnabled
+    } "enabled automation control $Id"
+    return $found.Value
+}
+function Invoke-Control([string]$Id) {
+    $Control = Get-Control $Id
     $Control.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
 }
 function Start-Isolated([string]$Path, [string]$DataDirectory, [switch]$Redirect) {
@@ -92,7 +104,7 @@ function Open-Application([string]$DataDirectory) {
 function Close-Application {
     $closing = $script:app
     $exit = Find-Control $script:window 'ExitButton'
-    if ($exit) { Invoke-Control $exit }
+    if ($exit) { Invoke-Control 'ExitButton' }
     else { $script:window.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() }
     if (!$closing.WaitForExit(10000)) { throw 'Window close did not exit the app.' }
     if ($closing.ExitCode -ne 0) { throw "Nonzero application exit: $($closing.ExitCode)" }
@@ -105,9 +117,9 @@ function Search([string]$Query, [int]$Expected) {
         $script:window = [System.Windows.Automation.AutomationElement]::FromHandle($script:app.MainWindowHandle)
         (Find-Control $script:window 'SearchQuery') -and (Find-Control $script:window 'SearchButton')
     } 'search controls available'
-    $searchBox = Find-Control $script:window 'SearchQuery'
+    $searchBox = Get-Control 'SearchQuery'
     $searchBox.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($Query)
-    Invoke-Control (Find-Control $script:window 'SearchButton')
+    Invoke-Control 'SearchButton'
     Wait-Until { (Find-Control $script:window 'BackendStatus').Current.Name -match " $Expected .* ms$" } "search count $Expected"
 }
 
@@ -155,11 +167,11 @@ try {
     $items[0].GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Wait-Until { (Find-Control $script:window 'PreviewText').Current.Name.Contains($fixtureText) } 'Chinese preview text'
     $lightness = Save-Window $script:window 'search-before-theme.png'
-    Invoke-Control (Find-Control $script:window 'ThemeButton')
+    Invoke-Control 'ThemeButton'
     Start-Sleep -Milliseconds 400
     $changedLightness = Save-Window $script:window 'search-after-theme.png'
     if ([Math]::Abs($lightness-$changedLightness) -lt 0.25) { throw 'Theme switch did not change the rendered background.' }
-    Invoke-Control (Find-Control $script:window 'ThemeButton')
+    Invoke-Control 'ThemeButton'
     Search 'zzzxunmatchedtokenxzzz' 0
     Search $keyword 3
     Write-Output 'PASS: Chinese search, three rendered results, preview, light/dark pixels, zero-hit query.'
@@ -183,9 +195,13 @@ try {
     Write-Output "Screenshots: $OutputDirectory"
     Write-Output "Isolated fixture: $testDirectory"
 } catch {
+    "$_`n$($_.ScriptStackTrace)" | Set-Content (Join-Path $OutputDirectory 'failure.txt') -Encoding utf8
+    Write-Output $_.ScriptStackTrace
     if ($script:app -and !$script:app.HasExited -and $script:window) {
-        $null = Save-Window $script:window 'failure.png'
-        Write-Output ((Find-Control $script:window 'BackendStatus').Current.Name)
+        try {
+            $null = Save-Window $script:window 'failure.png'
+            Write-Output ((Find-Control $script:window 'BackendStatus').Current.Name)
+        } catch { Write-Output 'Could not capture the failed window.' }
     }
     Write-Output "Failure fixture: $testDirectory"
     throw

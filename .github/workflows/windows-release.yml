@@ -122,15 +122,6 @@ jobs:
             ./scripts/test-mcp.ps1 -Package "./dist/RustSearch-$frontend"
           }
 
-      - name: Verify three desktop frontends
-        run: |
-          ./scripts/test-winui.ps1 -Executable ./dist/RustSearch-WinUI/RustSearch.WinUI.exe
-          ./scripts/test-winui-features.ps1 -Executable ./dist/RustSearch-WinUI/RustSearch.WinUI.exe -SkipPointerInput
-          ./scripts/test-ui.ps1 -Executable ./dist/RustSearch-WPF/RustSearch.UI.exe -Packaged
-          $env:RUSTSEARCH_TEST_TAURI = (Resolve-Path ./dist/RustSearch-Tauri/rustsearch-tauri.exe).Path
-          node RustSearch.Tauri/tests/desktop.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Tauri desktop tests failed' }
-
       - name: Verify third-party notices
         env:
           RUSTSEARCH_DEPENDENCY_CACHE_DIR: ${{ runner.temp }}\RustSearch-Dependencies
@@ -141,7 +132,6 @@ jobs:
           ./scripts/generate-third-party-notices.ps1 -Check
 
       - name: Upload build artifacts
-        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7.0.2
         with:
           name: RustSearch-win-x64
@@ -151,9 +141,69 @@ jobs:
             dist/RustSearch-*-release-set.json
           if-no-files-found: error
 
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: build-diagnostics
+          path: artifacts/
+          if-no-files-found: ignore
+
+  desktop:
+    needs: windows
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: RustSearch.Tauri/package-lock.json
+
+      - uses: actions/download-artifact@v7.0.0
+        with:
+          name: RustSearch-win-x64
+          path: dist
+
+      - name: Extract and verify built packages
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          foreach ($frontend in @('WinUI','WPF','Tauri')) {
+            Expand-Archive "dist/RustSearch-$version-$frontend-win-x64.zip" -DestinationPath "dist/RustSearch-$frontend"
+          }
+          ./scripts/test-release-packages.ps1 -SkipInstaller:($env:GITHUB_EVENT_NAME -eq 'pull_request')
+          npm --prefix RustSearch.Tauri ci
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop test dependency install failed' }
+
+      - name: Verify WinUI desktop
+        run: |
+          ./scripts/test-winui.ps1 -Executable ./dist/RustSearch-WinUI/RustSearch.WinUI.exe
+          ./scripts/test-winui-features.ps1 -Executable ./dist/RustSearch-WinUI/RustSearch.WinUI.exe -SkipPointerInput
+
+      - name: Verify WPF desktop
+        run: ./scripts/test-ui.ps1 -Executable ./dist/RustSearch-WPF/RustSearch.UI.exe -Packaged
+
+      - name: Verify Tauri desktop
+        run: |
+          $env:RUSTSEARCH_TEST_TAURI = (Resolve-Path ./dist/RustSearch-Tauri/rustsearch-tauri.exe).Path
+          node RustSearch.Tauri/tests/desktop.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Tauri desktop tests failed' }
+
+      - name: Upload desktop diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: desktop-diagnostics
+          path: artifacts/
+          if-no-files-found: ignore
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: windows
+    needs: [windows, desktop]
     runs-on: ubuntu-latest
     permissions:
       contents: write
