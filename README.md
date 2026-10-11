@@ -12,7 +12,7 @@ RustSearch 是完全本地运行的 Windows 全文搜索工具。WinUI 3 前端�
 - `RustSearch-<版本>-win-x64-setup.exe`：安装版，提供开始菜单、可选桌面快捷方式和卸载入口。
 - `RustSearch-<版本>-win-x64.zip`：便携版，解压后运行 `RustSearch.WinUI.exe`。请保留完整目录，不能只复制 EXE。
 
-微信输入法在当前 WinUI 3 文本框中可能只显示拼音预编辑文字而不弹出候选窗。这是 WinUI 对旧式第三方输入法辅助界面的兼容问题；普通 WinUI 文本框也受影响。安装版可从开始菜单打开 **RustSearch 输入法兼容界面**，便携版运行 `Compat\RustSearch.UI.exe`。兼容界面使用 WPF，微信输入法候选窗可正常显示，搜索与索引数据和 WinUI 版共用。切换界面前请完全退出另一个版本，避免同时打开同一索引。
+微信输入法在当前 WinUI 3 文本框中可能只显示拼音预编辑文字而不弹出候选窗。这是 WinUI 对旧式第三方输入法辅助界面的兼容问题；普通 WinUI 文本框也受影响。安装版可从开始菜单打开 **RustSearch 输入法兼容界面**，便携版运行 `Compat\RustSearch.UI.exe`。兼容界面使用 WPF，微信输入法候选窗可正常显示，两套界面通过共享后端访问同一索引。
 
 微信输入法候选窗的[实测截图](https://github.com/Binghuai-Yan/RustSearch/blob/main/docs/screenshots/wechat-ime-compat.png)可单独查看。
 
@@ -45,6 +45,8 @@ Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。发
    [单独查看外观设置截图](https://github.com/Binghuai-Yan/RustSearch/blob/main/docs/screenshots/appearance.png)
 
 5. 需要搜索图片或扫描 PDF 中的文字时，在“索引选项”开启“识别图片和扫描 PDF”，选择文件类型与单个 PDF 的页数上限，然后保存。普通索引先完成，OCR 在后台逐个处理；设置页显示待识别和失败数量，失败文件可手动重试。OCR 完成后重新搜索即可看到文字结果。识别完全在本机运行。[OCR 设计与验收](docs/ocr-design.md)说明处理流程和限制。
+
+6. 接入 MCP 客户端时，打开“设置 → 关于”，复制 Claude Desktop 或 Codex 配置并合并到客户端现有配置中，重启或重新连接客户端即可使用本地搜索工具。[MCP 接入说明](docs/mcp.md)包含参数与配置示例。迁移数据前需关闭 MCP 客户端；检索正文是否发送给模型服务由客户端设置决定。
 
 ## 功能
 
@@ -92,7 +94,7 @@ Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。发
 
 GitHub Actions 在拉取请求中运行静态检查、Rust 测试及两个前端的编译；`main` 推送和手动触发时构建并上传 ZIP/EXE。推送 `v<版本>` 标签后，工作流使用 `docs/releases/v<版本>.md` 创建带详细更新记录的 GitHub Release，并附上两个安装包。CI 跳过需要交互桌面的 UI 测试，本地发布前应运行完整桌面和安装器验收。
 
-发布新版本时，先同步更新 `VERSION`、`rustsearch-backend/Cargo.toml` 和 `Cargo.lock`，编写 `docs/releases/v<版本>.md`，完成本地验收，再推送同版本的标签。缺少详细更新记录或标签与 `VERSION` 不一致时，CI 会停止发布。[历史版本更新记录](docs/releases/v0.1.6.md)和[当前版本更新记录](docs/releases/v0.1.7.md)可在仓库查看。
+发布新版本时，先同步更新 `VERSION`、`rustsearch-backend/Cargo.toml` 和 `Cargo.lock`，编写 `docs/releases/v<版本>.md`，完成本地验收，再推送同版本的标签。缺少详细更新记录或标签与 `VERSION` 不一致时，CI 会停止发布。[上一版本更新记录](docs/releases/v0.1.7.md)和[当前版本更新记录](docs/releases/v0.1.8.md)可在仓库查看。
 
 ## 架构与许可
 

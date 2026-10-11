@@ -44,7 +44,7 @@ fn runtime_dir() -> Result<PathBuf> {
 
 fn tesseract(input: &Path, runtime: &Path, timeout: Duration) -> Result<String> {
     let temp = tempfile::tempdir()?;
-    let output = temp.path().join("page");
+    let output = temp.path().join("page.txt");
     let error_path = temp.path().join("stderr.txt");
     let executable = runtime.join("tesseract.exe");
     ensure!(executable.is_file(), "Tesseract OCR runtime is missing");
@@ -58,15 +58,17 @@ fn tesseract(input: &Path, runtime: &Path, timeout: Duration) -> Result<String> 
     );
     let mut command = Command::new(executable);
     command
-        .arg(input)
-        .arg(&output)
+        // Pass image/text through handles opened by Rust's Unicode-aware Windows IO.
+        // Tesseract/Leptonica may open argv paths using the system ANSI code page.
+        .arg("stdin")
+        .arg("stdout")
         .arg("-l")
         .arg("chi_sim+eng")
         .arg("--tessdata-dir")
-        .arg(runtime.join("tessdata"))
+        .arg("tessdata")
         .current_dir(runtime)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
+        .stdin(Stdio::from(fs::File::open(input)?))
+        .stdout(Stdio::from(fs::File::create(&output)?))
         .stderr(Stdio::from(fs::File::create(&error_path)?));
     #[cfg(windows)]
     {
@@ -83,7 +85,7 @@ fn tesseract(input: &Path, runtime: &Path, timeout: Duration) -> Result<String> 
                 "Tesseract exited with {status}: {}",
                 message.chars().take(2000).collect::<String>()
             );
-            let bytes = fs::read(output.with_extension("txt"))?;
+            let bytes = fs::read(&output)?;
             ensure!(bytes.len() <= MAX_TEXT_SIZE, "OCR text exceeds 8 MB");
             return Ok(String::from_utf8_lossy(&bytes).trim().to_owned());
         }

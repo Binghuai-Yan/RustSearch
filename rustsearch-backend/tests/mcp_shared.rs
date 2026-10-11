@@ -230,7 +230,7 @@ async fn official_sdk_searches_shared_index_without_writing_history() {
             true
         );
         std::fs::write(
-            root.join("scan.png"),
+            root.join("scan-图片📄.png"),
             include_bytes!("fixtures/ocr-chinese.png"),
         )
         .unwrap();
@@ -251,7 +251,14 @@ async fn official_sdk_searches_shared_index_without_writing_history() {
             if result["structuredContent"]["total_hits"] == 1 {
                 break result;
             }
-            assert!(tokio::time::Instant::now() < deadline, "{result}");
+            if tokio::time::Instant::now() >= deadline {
+                let status = desktop.call("app.stats", json!({})).await;
+                let log =
+                    std::fs::read_to_string(dir.join("logs/shared-engine.log")).unwrap_or_default();
+                panic!(
+                    "OCR search timed out: {result}; status: {status}; shared engine log: {log}"
+                );
+            }
             tokio::time::sleep(std::time::Duration::from_millis(200)).await;
         };
         let id = image["structuredContent"]["hits"][0]["document_id"].clone();
@@ -267,6 +274,7 @@ async fn official_sdk_searches_shared_index_without_writing_history() {
             .await
             .unwrap();
         let page = serde_json::to_value(page).unwrap();
+        assert_ne!(page["isError"], true, "{page}");
         assert!(
             page["structuredContent"]["text"]
                 .as_str()
