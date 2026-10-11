@@ -34,8 +34,9 @@ const appEnv = { ...process.env, RUSTSEARCH_DATA_DIR: data,
 // Exercise discovery of the bundled Backend directory from an unrelated cwd.
 delete appEnv.RUSTSEARCH_BACKEND_PATH;
 const app = spawn(executable, [], { cwd: tmpdir(), windowsHide: true, env: appEnv });
-let stderr = '';
+let stderr = '', stdout = '', connectionError = '';
 app.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+app.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
 let browser, page, peer;
 const failures = [];
 try {
@@ -43,9 +44,9 @@ try {
   for (let attempt = 0; attempt < 300; attempt++) {
     if (app.exitCode !== null) throw new Error(`Tauri exited: ${app.exitCode}\n${stderr}`);
     try { browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`); break; }
-    catch { await new Promise((done) => setTimeout(done, 200)); }
+    catch (error) { connectionError = error.message; await new Promise((done) => setTimeout(done, 200)); }
   }
-  if (!browser) throw new Error(`WebView debugging endpoint did not start.\n${stderr}`);
+  if (!browser) throw new Error(`WebView debugging endpoint did not start.\n${connectionError}\n${stderr}\n${stdout}`);
   for (let attempt = 0; attempt < 100; attempt++) {
     page = browser.contexts().flatMap((context) => context.pages())[0];
     if (page) break;
@@ -275,6 +276,13 @@ try {
   }, null, 2));
   console.log(`PASS: Tauri desktop checks. Screenshots: ${artifacts}`);
 } catch (error) {
+  if (!page && app.exitCode === null) {
+    try {
+      console.error(execFileSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+        join(frontend, 'tests/startup-diagnostics.ps1'), '-ApplicationPid', String(app.pid), '-DebugPort', String(port),
+        '-OutputDirectory', artifacts], { encoding: 'utf8', windowsHide: true, timeout: 20000, env: appEnv }));
+    } catch (diagnosticError) { console.error(`Startup diagnostics: ${diagnosticError.message}`); }
+  }
   if (page) {
     await page.screenshot({ path: join(artifacts, 'failure.png') }).catch(() => {});
     console.error((await page.locator('body').innerText().catch(() => '')).slice(0, 6000));

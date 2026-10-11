@@ -248,14 +248,6 @@ jobs:
           npm --prefix RustSearch.Tauri ci
           if ($LASTEXITCODE -ne 0) { throw 'Desktop test dependency install failed' }
 
-      - name: Verify WinUI desktop
-        run: |
-          ./scripts/test-winui.ps1 -Executable ./dist/RustSearch-WinUI/RustSearch.WinUI.exe
-          ./scripts/test-winui-features.ps1 -Executable ./dist/RustSearch-WinUI/RustSearch.WinUI.exe -SkipPointerInput
-
-      - name: Verify WPF desktop
-        run: ./scripts/test-ui.ps1 -Executable ./dist/RustSearch-WPF/RustSearch.UI.exe -Packaged
-
       - name: Prepare WebView2 runtime
         run: |
           function Find-WebViewRuntime {
@@ -281,6 +273,14 @@ jobs:
           $env:RUSTSEARCH_TEST_TAURI = (Resolve-Path ./dist/RustSearch-Tauri/rustsearch-tauri.exe).Path
           node RustSearch.Tauri/tests/desktop.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Tauri desktop tests failed' }
+
+      - name: Verify WinUI desktop
+        run: |
+          ./scripts/test-winui.ps1 -Executable ./dist/RustSearch-WinUI/RustSearch.WinUI.exe
+          ./scripts/test-winui-features.ps1 -Executable ./dist/RustSearch-WinUI/RustSearch.WinUI.exe -SkipPointerInput
+
+      - name: Verify WPF desktop
+        run: ./scripts/test-ui.ps1 -Executable ./dist/RustSearch-WPF/RustSearch.UI.exe -Packaged
 
       - name: Upload desktop diagnostics
         if: always()
