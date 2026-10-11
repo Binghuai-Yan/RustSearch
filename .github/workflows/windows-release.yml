@@ -256,6 +256,26 @@ jobs:
       - name: Verify WPF desktop
         run: ./scripts/test-ui.ps1 -Executable ./dist/RustSearch-WPF/RustSearch.UI.exe -Packaged
 
+      - name: Prepare WebView2 runtime
+        run: |
+          function Find-WebViewRuntime {
+            $roots = @("${env:ProgramFiles(x86)}/Microsoft/EdgeWebView/Application", "$env:ProgramFiles/Microsoft/EdgeWebView/Application", "$env:LOCALAPPDATA/Microsoft/EdgeWebView/Application")
+            foreach ($root in $roots) {
+              if (Test-Path -LiteralPath $root) {
+                Get-ChildItem -LiteralPath $root -Filter msedgewebview2.exe -File -Recurse
+              }
+            }
+          }
+          $runtime = Find-WebViewRuntime | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $runtime) {
+            choco install webview2-runtime --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'WebView2 runtime installation failed' }
+            $runtime = Find-WebViewRuntime | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          }
+          if (-not $runtime) { throw 'WebView2 runtime executable is unavailable' }
+          "WEBVIEW2_BROWSER_EXECUTABLE_FOLDER=$($runtime.DirectoryName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Output "WebView2 runtime: $($runtime.FullName) ($($runtime.VersionInfo.ProductVersion))"
+
       - name: Verify Tauri desktop
         run: |
           $env:RUSTSEARCH_TEST_TAURI = (Resolve-Path ./dist/RustSearch-Tauri/rustsearch-tauri.exe).Path

@@ -39,7 +39,8 @@ app.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
 let browser, page, peer;
 const failures = [];
 try {
-  for (let attempt = 0; attempt < 100; attempt++) {
+  // A fresh Windows runner may be initializing its WebView2 profile for the first time.
+  for (let attempt = 0; attempt < 300; attempt++) {
     if (app.exitCode !== null) throw new Error(`Tauri exited: ${app.exitCode}\n${stderr}`);
     try { browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`); break; }
     catch { await new Promise((done) => setTimeout(done, 200)); }
