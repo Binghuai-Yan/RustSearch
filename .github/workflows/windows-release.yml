@@ -6,6 +6,12 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      reuse_run:
+        description: 'Reuse a successful build run after desktop-test or CI-only changes'
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -16,6 +22,7 @@ concurrency:
 
 jobs:
   windows:
+    if: github.event_name != 'workflow_dispatch' || inputs.reuse_run == ''
     runs-on: windows-latest
     defaults:
       run:
@@ -149,8 +156,70 @@ jobs:
           path: artifacts/
           if-no-files-found: ignore
 
+  reuse:
+    if: github.event_name == 'workflow_dispatch' && inputs.reuse_run != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Verify the existing build and unchanged application sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.reuse_run }}
+        run: |
+          [[ "$SOURCE_RUN" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN" > source-run.json
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN/jobs?per_page=100" > source-jobs.json
+          python - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          run = json.loads(Path('source-run.json').read_text())
+          assert run['head_repository']['full_name'] == os.environ['GITHUB_REPOSITORY']
+          assert run['path'] == '.github/workflows/windows-release.yml'
+          jobs = json.loads(Path('source-jobs.json').read_text())['jobs']
+          assert any(j['name'] == 'windows' and j['conclusion'] == 'success' for j in jobs), 'Source build checks did not pass'
+          changed = subprocess.check_output(['git', 'diff', '--name-only', run['head_sha'], os.environ['GITHUB_SHA']], text=True).splitlines()
+          allowed = {'.github/workflows/windows-release.yml', 'scripts/test-winui.ps1', 'scripts/test-winui-features.ps1', 'scripts/test-winui-visual.ps1', 'scripts/test-ui.ps1'}
+          unexpected = [p for p in changed if p not in allowed and not p.startswith('RustSearch.Tauri/tests/')]
+          assert not unexpected, f'Application or build inputs changed; a fresh build is required: {unexpected}'
+          print(f"Verified application sources match successful build {run['id']} at {run['head_sha']}")
+          PY
+
+      - uses: actions/download-artifact@v7.0.0
+        with:
+          name: RustSearch-win-x64
+          path: dist
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.reuse_run }}
+
+      - name: Verify all six reused artifact digests
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          version = Path('VERSION').read_text().strip()
+          manifest = json.loads(Path(f'dist/RustSearch-{version}-release-set.json').read_text(encoding='utf-8-sig'))
+          assert manifest['version'] == version
+          expected = {f'RustSearch-{version}-{f}-win-x64{s}' for f in ['WinUI', 'WPF', 'Tauri'] for s in ['.zip', '-setup.exe']}
+          assert {a['file'] for a in manifest['artifacts']} == expected and len(manifest['artifacts']) == 6
+          for artifact in manifest['artifacts']:
+              assert hashlib.sha256(Path('dist', artifact['file']).read_bytes()).hexdigest().upper() == artifact['sha256']
+          PY
+
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: RustSearch-win-x64
+          path: dist/
+          if-no-files-found: error
+
   desktop:
-    needs: windows
+    if: ${{ !cancelled() && (needs.windows.result == 'success' || needs.reuse.result == 'success') }}
+    needs: [windows, reuse]
     runs-on: windows-latest
     defaults:
       run:
@@ -202,8 +271,8 @@ jobs:
           if-no-files-found: ignore
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [windows, desktop]
+    if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') && needs.desktop.result == 'success' && (needs.windows.result == 'success' || needs.reuse.result == 'success') }}
+    needs: [windows, reuse, desktop]
     runs-on: ubuntu-latest
     permissions:
       contents: write

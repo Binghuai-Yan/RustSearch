@@ -75,6 +75,7 @@ function Find-Control($Scope, [string]$Id, [switch]$ByName) {
 }
 function Select-SettingsSection([ValidateSet('Index','Options','Appearance','Storage','About')][string]$Section) {
     $id = 'SettingsNav' + $Section
+    Wait-Until { $null -ne (Find-Control $script:settings $id) } "settings navigation $Section available"
     $item = Find-Control $script:settings $id
     if (!$item) { throw "Missing settings category: $id" }
     $selection = $item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)
@@ -107,13 +108,16 @@ function Read-Control([string]$Id, $Scope = $script:window) {
 }
 function Get-Control([string]$Id, $Scope = $script:window) {
     Select-SettingsSectionForControl $Id $Scope
-    $control = Find-Control $Scope $Id
-    if (!$control -and $Id.StartsWith('Settings') -and $script:settings) {
-        Wait-Until { $null -ne (Find-Control $Scope $Id) } "$Id loaded after settings navigation"
-        $control = Find-Control $Scope $Id
-    }
-    if (!$control) { throw "Missing automation control: $Id" }
-    return $control
+    $found = [ref]$null
+    $handle = [IntPtr]$Scope.Current.NativeWindowHandle
+    # Resizing, theme changes and navigation invalidate WinUI automation peers.
+    # Reacquire the window and wait for its requested child before acting.
+    Wait-Until {
+        $currentScope = if ($handle -ne [IntPtr]::Zero) { [System.Windows.Automation.AutomationElement]::FromHandle($handle) } else { $Scope }
+        $found.Value = Find-Control $currentScope $Id
+        $null -ne $found.Value
+    } "automation control $Id available"
+    return $found.Value
 }
 function Reveal-Control($Control) {
     if (!$Control.Current.IsOffscreen) { return }
@@ -483,6 +487,10 @@ try {
     foreach ($id in @('SearchQuery','SearchButton','SettingsButton','TypeFilter','SortFilter','CopyPathButton')) { Assert-ControlFits $id $script:window }
     $null = Save-Window $script:window '05-main-compact.png'
     $transform.Resize($originalRect.Width,$originalRect.Height)
+    Wait-Until {
+        $restored = $script:window.Current.BoundingRectangle
+        [Math]::Abs($restored.Width-$originalRect.Width) -lt 2 -and [Math]::Abs($restored.Height-$originalRect.Height) -lt 2
+    } 'main window restored after compact layout'
     Write-Output 'PASS: pane resizing, rendered light/dark themes and compact main layout (see pointer skip status above).'
 
     Open-Settings
