@@ -5,7 +5,7 @@ Generated from the locked Cargo dependency graph and the restored WinUI/WPF NuGe
 Bundled IconPark SVGs come from [ByteDance IconPark](https://github.com/bytedance/IconPark) (`@icon-park/svg` 1.4.2), Apache-2.0. The preserved license is `Assets/IconPark/LICENSE` in the release directory and [in the source tree](https://github.com/Binghuai-Yan/RustSearch/blob/main/RustSearch.WinUI/Assets/IconPark/LICENSE). The bundled SQLite library is [public domain](https://www.sqlite.org/copyright.html).
 Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract), [tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast) Chinese/English models (Apache-2.0), and [PDFium binaries chromium/8086](https://github.com/bblanchon/pdfium-binaries) (MIT package license with included third-party notices). Their preserved licenses are under `Backend/OCR/`, including `pdfium-licenses/`.
 
-## Cargo packages (309)
+## Cargo packages (356)
 
 | Package | Version | Declared license |
 | --- | --- | --- |
@@ -21,9 +21,11 @@ Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract
 | [async-trait](https://github.com/dtolnay/async-trait) | 0.1.92 | MIT OR Apache-2.0 |
 | [autocfg](https://github.com/cuviper/autocfg) | 1.5.1 | Apache-2.0 OR MIT |
 | [base64](https://github.com/marshallpierce/rust-base64) | 0.22.1 | MIT OR Apache-2.0 |
+| [base64](https://github.com/marshallpierce/rust-base64) | 0.23.1 | MIT OR Apache-2.0 |
 | [bitflags](https://github.com/bitflags/bitflags) | 1.3.2 | MIT/Apache-2.0 |
 | [bitflags](https://github.com/bitflags/bitflags) | 2.13.1 | MIT OR Apache-2.0 |
 | [bitpacking](https://github.com/quickwit-oss/bitpacking) | 0.9.3 | MIT |
+| [block-buffer](https://github.com/RustCrypto/utils) | 0.10.4 | MIT OR Apache-2.0 |
 | [bstr](https://github.com/BurntSushi/bstr) | 1.13.1 | MIT OR Apache-2.0 |
 | [bumpalo](https://github.com/fitzgen/bumpalo) | 3.20.3 | MIT OR Apache-2.0 |
 | [bytemuck](https://github.com/Lokathor/bytemuck) | 1.25.2 | Zlib OR Apache-2.0 OR MIT |
@@ -34,6 +36,7 @@ Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract
 | [cc](https://github.com/rust-lang/cc-rs) | 1.4.5 | MIT OR Apache-2.0 |
 | [cedarwood](https://github.com/MnO2/cedarwood) | 0.4.6 | BSD-2-Clause |
 | [census](https://github.com/quickwit-inc/census) | 0.4.2 | MIT |
+| [cfg_aliases](https://github.com/katharostech/cfg_aliases) | 0.2.2 | MIT |
 | [cfg-if](https://github.com/rust-lang/cfg-if) | 1.0.4 | MIT OR Apache-2.0 |
 | [chardetng](https://github.com/hsivonen/chardetng) | 0.1.17 | Apache-2.0 OR MIT |
 | [chrono](https://github.com/chronotope/chrono) | 0.4.45 | MIT OR Apache-2.0 |
@@ -42,20 +45,27 @@ Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract
 | [console_log](https://github.com/iamcodemaker/console_log) | 1.1.0 | MIT/Apache-2.0 |
 | [core_detect](https://github.com/thomcc/core_detect) | 1.0.0 | MIT/Apache-2.0 |
 | [core-foundation-sys](https://github.com/servo/core-foundation-rs) | 0.8.7 | MIT OR Apache-2.0 |
+| [cpufeatures](https://github.com/RustCrypto/utils) | 0.2.17 | MIT OR Apache-2.0 |
 | [crc32fast](https://github.com/srijs/rust-crc32fast) | 1.5.1 | MIT OR Apache-2.0 |
 | [crossbeam-channel](https://github.com/crossbeam-rs/crossbeam) | 0.5.17 | MIT OR Apache-2.0 |
 | [crossbeam-deque](https://github.com/crossbeam-rs/crossbeam) | 0.8.8 | MIT OR Apache-2.0 |
 | [crossbeam-epoch](https://github.com/crossbeam-rs/crossbeam) | 0.9.21 | MIT OR Apache-2.0 |
 | [crossbeam-utils](https://github.com/crossbeam-rs/crossbeam) | 0.8.23 | MIT OR Apache-2.0 |
 | [crunchy](https://github.com/eira-fransham/crunchy) | 0.2.4 | MIT |
+| [crypto-common](https://github.com/RustCrypto/traits) | 0.1.7 | MIT OR Apache-2.0 |
 | [cssparser](https://github.com/servo/rust-cssparser) | 0.31.2 | MPL-2.0 |
 | [cssparser-macros](https://github.com/servo/rust-cssparser) | 0.6.1 | MPL-2.0 |
+| [darling](https://github.com/TedDriggs/darling) | 0.24.1 | MIT |
+| [darling_core](https://github.com/TedDriggs/darling) | 0.24.1 | MIT |
+| [darling_macro](https://github.com/TedDriggs/darling) | 0.24.1 | MIT |
 | [dary_heap](https://github.com/hanmertens/dary_heap) | 0.3.9 | MIT OR Apache-2.0 |
 | [deranged](https://github.com/jhpratt/deranged) | 0.5.8 | MIT OR Apache-2.0 |
 | [derive_more](https://github.com/JelteF/derive_more) | 0.99.20 | MIT |
+| [digest](https://github.com/RustCrypto/traits) | 0.10.7 | MIT OR Apache-2.0 |
 | [downcast-rs](https://github.com/marcianx/downcast-rs) | 1.2.1 | MIT/Apache-2.0 |
 | [dtoa](https://github.com/dtolnay/dtoa) | 1.0.11 | MIT OR Apache-2.0 |
 | [dtoa-short](https://github.com/upsuper/dtoa-short) | 0.3.5 | MPL-2.0 |
+| [dyn-clone](https://github.com/dtolnay/dyn-clone) | 1.0.20 | MIT OR Apache-2.0 |
 | [ego-tree](https://github.com/rust-scraper/ego-tree) | 0.6.3 | ISC |
 | [either](https://github.com/rayon-rs/either) | 1.18.0 | MIT OR Apache-2.0 |
 | [encoding_rs](https://github.com/hsivonen/encoding_rs) | 0.8.40 | (Apache-2.0 OR MIT) AND BSD-3-Clause |
@@ -77,10 +87,17 @@ Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract
 | [fs4](https://github.com/al8n/fs4-rs) | 0.8.4 | MIT OR Apache-2.0 |
 | [fsevent-sys](https://github.com/octplane/fsevent-rust/tree/master/fsevent-sys) | 4.1.0 | MIT |
 | [futf](https://github.com/servo/futf) | 0.1.5 | MIT / Apache-2.0 |
+| [futures](https://github.com/rust-lang/futures-rs) | 0.3.34 | MIT OR Apache-2.0 |
+| [futures-channel](https://github.com/rust-lang/futures-rs) | 0.3.34 | MIT OR Apache-2.0 |
 | [futures-core](https://github.com/rust-lang/futures-rs) | 0.3.34 | MIT OR Apache-2.0 |
+| [futures-executor](https://github.com/rust-lang/futures-rs) | 0.3.34 | MIT OR Apache-2.0 |
+| [futures-io](https://github.com/rust-lang/futures-rs) | 0.3.34 | MIT OR Apache-2.0 |
+| [futures-macro](https://github.com/rust-lang/futures-rs) | 0.3.34 | MIT OR Apache-2.0 |
+| [futures-sink](https://github.com/rust-lang/futures-rs) | 0.3.34 | MIT OR Apache-2.0 |
 | [futures-task](https://github.com/rust-lang/futures-rs) | 0.3.34 | MIT OR Apache-2.0 |
 | [futures-util](https://github.com/rust-lang/futures-rs) | 0.3.34 | MIT OR Apache-2.0 |
 | [fxhash](https://github.com/cbreeden/fxhash) | 0.2.1 | Apache-2.0/MIT |
+| [generic-array](https://github.com/fizyk20/generic-array.git) | 0.14.7 | MIT |
 | [getopts](https://github.com/rust-lang/getopts) | 0.2.24 | MIT OR Apache-2.0 |
 | [getrandom](https://github.com/rust-random/getrandom) | 0.2.17 | MIT OR Apache-2.0 |
 | [getrandom](https://github.com/rust-random/getrandom) | 0.3.4 | MIT OR Apache-2.0 |
@@ -90,17 +107,20 @@ Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract
 | [hashbrown](https://github.com/rust-lang/hashbrown) | 0.14.5 | MIT OR Apache-2.0 |
 | [hashbrown](https://github.com/rust-lang/hashbrown) | 0.15.5 | MIT OR Apache-2.0 |
 | [hashbrown](https://github.com/rust-lang/hashbrown) | 0.16.1 | MIT OR Apache-2.0 |
+| [hashbrown](https://github.com/rust-lang/hashbrown) | 0.17.1 | MIT OR Apache-2.0 |
 | [hashlink](https://github.com/kyren/hashlink) | 0.9.1 | MIT OR Apache-2.0 |
 | [hermit-abi](https://github.com/hermit-os/hermit-rs) | 0.5.3 | MIT OR Apache-2.0 |
 | [html5ever](https://github.com/servo/html5ever) | 0.27.0 | MIT OR Apache-2.0 |
 | [htmlescape](https://github.com/veddan/rust-htmlescape) | 0.3.1 | Apache-2.0 / MIT / MPL-2.0 |
 | [iana-time-zone](https://github.com/strawlab/iana-time-zone) | 0.1.65 | MIT OR Apache-2.0 |
 | [iana-time-zone-haiku](https://github.com/strawlab/iana-time-zone) | 0.1.2 | MIT OR Apache-2.0 |
+| [ident_case](https://github.com/TedDriggs/ident_case) | 1.0.1 | MIT/Apache-2.0 |
 | [ignore](https://github.com/BurntSushi/ripgrep/tree/master/crates/ignore) | 0.4.33 | Unlicense OR MIT |
 | [image](https://github.com/image-rs/image) | 0.25.10 | MIT OR Apache-2.0 |
 | [include-flate](https://github.com/SOF3/include-flate.git) | 0.3.4 | Apache-2.0 |
 | [include-flate-codegen](https://github.com/SOF3/include-flate.git) | 0.3.4 | Apache-2.0 |
 | [include-flate-compress](https://github.com/SOF3/include-flate.git) | 0.3.4 | Apache-2.0 |
+| [indexmap](https://github.com/indexmap-rs/indexmap) | 2.14.2 | Apache-2.0 OR MIT |
 | [inotify](https://github.com/hannobraun/inotify) | 0.9.6 | ISC |
 | [inotify-sys](https://github.com/hannobraun/inotify-sys) | 0.1.8 | ISC |
 | [instant](https://github.com/sebcrozet/instant) | 0.1.13 | BSD-3-Clause |
@@ -140,12 +160,14 @@ Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract
 | [miniz_oxide](https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide) | 0.8.9 | MIT OR Zlib OR Apache-2.0 |
 | [miniz_oxide](https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide) | 0.9.1 | MIT OR Zlib OR Apache-2.0 |
 | [mio](https://github.com/tokio-rs/mio) | 0.8.11 | MIT |
+| [mio](https://github.com/tokio-rs/mio) | 1.2.4 | MIT |
 | [moxcms](https://github.com/awxkee/moxcms.git) | 0.8.1 | BSD-3-Clause OR Apache-2.0 |
 | [multiversion](https://github.com/calebzulawski/multiversion) | 0.8.0 | MIT OR Apache-2.0 |
 | [multiversion_no_op](https://github.com/hsivonen/multiversion_no_op) | 1.0.0 | Apache-2.0 OR MIT |
 | [multiversion-macros](https://github.com/calebzulawski/multiversion) | 0.8.0 | MIT OR Apache-2.0 |
 | [murmurhash32](https://github.com/quickwit-inc/murmurhash32) | 0.3.1 | MIT |
 | [new_debug_unreachable](https://github.com/mbrubeck/rust-debug-unreachable) | 1.0.6 | MIT |
+| [nix](https://github.com/nix-rust/nix) | 0.31.3 | MIT |
 | [no_std_io2](https://github.com/wcampbell0x2a/no-std-io2) | 0.9.4 | Apache-2.0 OR MIT |
 | [nom](https://github.com/Geal/nom) | 7.1.3 | MIT |
 | [notify](https://github.com/notify-rs/notify.git) | 6.1.1 | CC0-1.0 |
@@ -158,6 +180,7 @@ Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract
 | [ownedbytes](https://github.com/quickwit-oss/tantivy) | 0.7.0 | MIT |
 | [parking_lot](https://github.com/Amanieu/parking_lot) | 0.12.5 | MIT OR Apache-2.0 |
 | [parking_lot_core](https://github.com/Amanieu/parking_lot) | 0.9.12 | MIT OR Apache-2.0 |
+| [pastey](https://github.com/as1100k/pastey) | 0.2.3 | MIT OR Apache-2.0 |
 | [pdf-extract](https://github.com/jrmuizel/pdf-extract) | 0.7.10 | MIT |
 | [pdfium-render](https://github.com/ajrcarey/pdfium-render) | 0.9.4 | MIT OR Apache-2.0 |
 | [phf](https://github.com/sfackler/rust-phf) | 0.10.1 | MIT |
@@ -181,6 +204,7 @@ Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract
 | [proc-macro-error-attr3](https://github.com/gamma0987/proc-macro-error3) | 3.1.1 | MIT OR Apache-2.0 |
 | [proc-macro-error3](https://github.com/gamma0987/proc-macro-error3) | 3.1.1 | MIT OR Apache-2.0 |
 | [proc-macro2](https://github.com/dtolnay/proc-macro2) | 1.0.107 | MIT OR Apache-2.0 |
+| [process-wrap](https://github.com/watchexec/process-wrap) | 10.0.1 | Apache-2.0 OR MIT |
 | [pxfm](https://github.com/awxkee/pxfm) | 0.1.30 | BSD-3-Clause OR Apache-2.0 |
 | [quick-error](http://github.com/tailhook/quick-error) | 2.0.1 | MIT/Apache-2.0 |
 | [quick-xml](https://github.com/tafia/quick-xml) | 0.31.0 | MIT |
@@ -194,10 +218,14 @@ Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract
 | [rayon](https://github.com/rayon-rs/rayon) | 1.12.0 | MIT OR Apache-2.0 |
 | [rayon-core](https://github.com/rayon-rs/rayon) | 1.13.0 | MIT OR Apache-2.0 |
 | [redox_syscall](https://gitlab.redox-os.org/redox-os/syscall) | 0.5.18 | MIT |
+| [ref-cast](https://github.com/dtolnay/ref-cast) | 1.0.27 | MIT OR Apache-2.0 |
+| [ref-cast-impl](https://github.com/dtolnay/ref-cast) | 1.0.27 | MIT OR Apache-2.0 |
 | [regex](https://github.com/rust-lang/regex) | 1.13.1 | MIT OR Apache-2.0 |
 | [regex-automata](https://github.com/rust-lang/regex) | 0.4.18 | MIT OR Apache-2.0 |
 | [regex-syntax](https://github.com/rust-lang/regex) | 0.8.11 | MIT OR Apache-2.0 |
 | [rle-decode-fast](https://github.com/WanzenBug/rle-decode-helper) | 1.0.3 | MIT OR Apache-2.0 |
+| [rmcp](https://github.com/modelcontextprotocol/rust-sdk/) | 3.5.1 | Apache-2.0 |
+| [rmcp-macros](https://github.com/modelcontextprotocol/rust-sdk/) | 3.5.1 | Apache-2.0 |
 | [rusqlite](https://github.com/rusqlite/rusqlite) | 0.31.0 | MIT |
 | [rust-stemmers](https://github.com/CurrySoftware/rust-stemmers) | 1.2.0 | MIT/BSD-3-Clause |
 | [rustc-hash](https://github.com/rust-lang-nursery/rustc-hash) | 1.1.0 | Apache-2.0/MIT |
@@ -205,16 +233,21 @@ Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract
 | [rustix](https://github.com/bytecodealliance/rustix) | 1.1.4 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | [rustversion](https://github.com/dtolnay/rustversion) | 1.0.23 | MIT OR Apache-2.0 |
 | [same-file](https://github.com/BurntSushi/same-file) | 1.0.6 | Unlicense/MIT |
+| [schemars](https://github.com/GREsau/schemars) | 1.2.2 | MIT |
+| [schemars_derive](https://github.com/GREsau/schemars) | 1.2.2 | MIT |
 | [scopeguard](https://github.com/bluss/scopeguard) | 1.2.0 | MIT OR Apache-2.0 |
 | [scraper](https://github.com/causal-agent/scraper) | 0.19.1 | ISC |
 | [selectors](https://github.com/servo/servo) | 0.25.0 | MPL-2.0 |
 | [serde](https://github.com/serde-rs/serde) | 1.0.229 | MIT OR Apache-2.0 |
 | [serde_core](https://github.com/serde-rs/serde) | 1.0.229 | MIT OR Apache-2.0 |
 | [serde_derive](https://github.com/serde-rs/serde) | 1.0.229 | MIT OR Apache-2.0 |
+| [serde_derive_internals](https://github.com/serde-rs/serde) | 0.30.0 | MIT OR Apache-2.0 |
 | [serde_json](https://github.com/serde-rs/json) | 1.0.151 | MIT OR Apache-2.0 |
 | [servo_arc](https://github.com/servo/servo) | 0.3.0 | MIT/Apache-2.0 |
+| [sha2](https://github.com/RustCrypto/hashes) | 0.10.9 | MIT OR Apache-2.0 |
 | [sharded-slab](https://github.com/hawkw/sharded-slab) | 0.1.7 | MIT |
 | [shlex](https://github.com/comex/rust-shlex) | 2.0.1 | MIT OR Apache-2.0 |
+| [signal-hook-registry](https://github.com/vorner/signal-hook) | 1.4.8 | MIT OR Apache-2.0 |
 | [simd-adler32](https://github.com/mcountryman/simd-adler32) | 0.3.10 | MIT |
 | [simdutf8](https://github.com/rusticstuff/simdutf8) | 0.1.5 | MIT OR Apache-2.0 |
 | [siphasher](https://github.com/jedisct1/rust-siphash) | 0.3.11 | MIT/Apache-2.0 |
@@ -222,9 +255,11 @@ Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract
 | [sketches-ddsketch](https://github.com/mheffner/rust-sketches-ddsketch) | 0.2.2 | Apache-2.0 |
 | [slab](https://github.com/tokio-rs/slab) | 0.4.12 | MIT |
 | [smallvec](https://github.com/servo/rust-smallvec) | 1.16.0 | MIT OR Apache-2.0 |
+| [socket2](https://github.com/rust-lang/socket2) | 0.6.5 | MIT OR Apache-2.0 |
 | [stable_deref_trait](https://github.com/storyyeller/stable_deref_trait) | 1.2.1 | MIT OR Apache-2.0 |
 | [string_cache](https://github.com/servo/string-cache) | 0.8.9 | MIT OR Apache-2.0 |
 | [string_cache_codegen](https://github.com/servo/string-cache) | 0.5.4 | MIT OR Apache-2.0 |
+| [strsim](https://github.com/rapidfuzz/strsim-rs) | 0.11.1 | MIT |
 | [syn](https://github.com/dtolnay/syn) | 2.0.119 | MIT OR Apache-2.0 |
 | [syn](https://github.com/dtolnay/syn) | 3.0.5 | MIT OR Apache-2.0 |
 | [tantivy](https://github.com/quickwit-oss/tantivy) | 0.22.1 | MIT |
@@ -241,7 +276,9 @@ Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract
 | [tempfile](https://github.com/Stebalien/tempfile) | 3.27.0 | MIT OR Apache-2.0 |
 | [tendril](https://github.com/servo/tendril) | 0.4.3 | MIT/Apache-2.0 |
 | [thiserror](https://github.com/dtolnay/thiserror) | 1.0.69 | MIT OR Apache-2.0 |
+| [thiserror](https://github.com/dtolnay/thiserror) | 2.0.21 | MIT OR Apache-2.0 |
 | [thiserror-impl](https://github.com/dtolnay/thiserror) | 1.0.69 | MIT OR Apache-2.0 |
+| [thiserror-impl](https://github.com/dtolnay/thiserror) | 2.0.21 | MIT OR Apache-2.0 |
 | [thread_local](https://github.com/Amanieu/thread_local-rs) | 1.1.10 | MIT OR Apache-2.0 |
 | [tiff](https://github.com/image-rs/image-tiff) | 0.11.3 | MIT |
 | [time](https://github.com/time-rs/time) | 0.3.55 | MIT OR Apache-2.0 |
@@ -249,12 +286,17 @@ Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract
 | [time-macros](https://github.com/time-rs/time) | 0.2.32 | MIT OR Apache-2.0 |
 | [tinyvec](https://github.com/Lokathor/tinyvec) | 1.13.2 | Zlib OR Apache-2.0 OR MIT |
 | [tinyvec_macros](https://github.com/Soveu/tinyvec_macros) | 0.1.1 | MIT OR Apache-2.0 OR Zlib |
+| [tokio](https://github.com/tokio-rs/tokio) | 1.53.2 | MIT |
+| [tokio-macros](https://github.com/tokio-rs/tokio) | 2.7.2 | MIT |
+| [tokio-stream](https://github.com/tokio-rs/tokio) | 0.1.19 | MIT |
+| [tokio-util](https://github.com/tokio-rs/tokio) | 0.7.20 | MIT |
 | [tracing](https://github.com/tokio-rs/tracing) | 0.1.44 | MIT |
 | [tracing-attributes](https://github.com/tokio-rs/tracing) | 0.1.31 | MIT |
 | [tracing-core](https://github.com/tokio-rs/tracing) | 0.1.36 | MIT |
 | [tracing-log](https://github.com/tokio-rs/tracing) | 0.2.0 | MIT |
 | [tracing-subscriber](https://github.com/tokio-rs/tracing) | 0.3.23 | MIT |
 | [type1-encoding-parser](https://github.com/jrmuizel/type1-encoding-parser) | 0.1.1 | MIT |
+| [typenum](https://github.com/paholg/typenum) | 1.20.1 | MIT OR Apache-2.0 |
 | [unicode-ident](https://github.com/dtolnay/unicode-ident) | 1.0.24 | (MIT OR Apache-2.0) AND Unicode-3.0 |
 | [unicode-normalization](https://github.com/unicode-rs/unicode-normalization) | 0.1.25 | MIT OR Apache-2.0 |
 | [unicode-width](https://github.com/unicode-rs/unicode-width) | 0.2.2 | MIT OR Apache-2.0 |
@@ -280,6 +322,7 @@ Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract
 | [winapi-i686-pc-windows-gnu](https://github.com/retep998/winapi-rs) | 0.4.0 | MIT/Apache-2.0 |
 | [winapi-util](https://github.com/BurntSushi/winapi-util) | 0.1.11 | Unlicense OR MIT |
 | [winapi-x86_64-pc-windows-gnu](https://github.com/retep998/winapi-rs) | 0.4.0 | MIT/Apache-2.0 |
+| [windows](https://github.com/microsoft/windows-rs) | 0.62.2 | MIT OR Apache-2.0 |
 | [windows_aarch64_gnullvm](https://github.com/microsoft/windows-rs) | 0.48.5 | MIT OR Apache-2.0 |
 | [windows_aarch64_gnullvm](https://github.com/microsoft/windows-rs) | 0.52.6 | MIT OR Apache-2.0 |
 | [windows_aarch64_msvc](https://github.com/microsoft/windows-rs) | 0.48.5 | MIT OR Apache-2.0 |
@@ -295,10 +338,13 @@ Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract
 | [windows_x86_64_gnullvm](https://github.com/microsoft/windows-rs) | 0.52.6 | MIT OR Apache-2.0 |
 | [windows_x86_64_msvc](https://github.com/microsoft/windows-rs) | 0.48.5 | MIT OR Apache-2.0 |
 | [windows_x86_64_msvc](https://github.com/microsoft/windows-rs) | 0.52.6 | MIT OR Apache-2.0 |
+| [windows-collections](https://github.com/microsoft/windows-rs) | 0.3.2 | MIT OR Apache-2.0 |
 | [windows-core](https://github.com/microsoft/windows-rs) | 0.62.2 | MIT OR Apache-2.0 |
+| [windows-future](https://github.com/microsoft/windows-rs) | 0.3.2 | MIT OR Apache-2.0 |
 | [windows-implement](https://github.com/microsoft/windows-rs) | 0.60.2 | MIT OR Apache-2.0 |
 | [windows-interface](https://github.com/microsoft/windows-rs) | 0.59.3 | MIT OR Apache-2.0 |
 | [windows-link](https://github.com/microsoft/windows-rs) | 0.2.1 | MIT OR Apache-2.0 |
+| [windows-numerics](https://github.com/microsoft/windows-rs) | 0.3.1 | MIT OR Apache-2.0 |
 | [windows-result](https://github.com/microsoft/windows-rs) | 0.4.1 | MIT OR Apache-2.0 |
 | [windows-strings](https://github.com/microsoft/windows-rs) | 0.5.1 | MIT OR Apache-2.0 |
 | [windows-sys](https://github.com/microsoft/windows-rs) | 0.48.0 | MIT OR Apache-2.0 |
@@ -307,6 +353,7 @@ Offline OCR bundles [Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract
 | [windows-sys](https://github.com/microsoft/windows-rs) | 0.61.2 | MIT OR Apache-2.0 |
 | [windows-targets](https://github.com/microsoft/windows-rs) | 0.48.5 | MIT OR Apache-2.0 |
 | [windows-targets](https://github.com/microsoft/windows-rs) | 0.52.6 | MIT OR Apache-2.0 |
+| [windows-threading](https://github.com/microsoft/windows-rs) | 0.2.1 | MIT OR Apache-2.0 |
 | [wit-bindgen](https://github.com/bytecodealliance/wit-bindgen) | 0.57.1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | [zerocopy](https://github.com/google/zerocopy) | 0.8.56 | BSD-2-Clause OR Apache-2.0 OR MIT |
 | [zerocopy-derive](https://github.com/google/zerocopy) | 0.8.56 | BSD-2-Clause OR Apache-2.0 OR MIT |

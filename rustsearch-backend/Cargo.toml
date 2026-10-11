@@ -2,6 +2,7 @@
 name = "rustsearch-backend"
 version = "0.1.7"
 edition = "2021"
+default-run = "rustsearch-backend"
 
 [dependencies]
 anyhow = "1"
@@ -31,6 +32,12 @@ crossbeam-channel = "0.5"
 tempfile = "3"
 pdfium-render = { version = "0.9.4", default-features = false, features = ["pdfium_7881", "image_025", "thread_safe"] }
 image = { version = "0.25", default-features = false, features = ["bmp", "jpeg", "png", "tiff"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "io-std", "process", "sync", "time"] }
+rmcp = { version = "=3.5.1", features = ["transport-io", "client", "transport-child-process"] }
+sha2 = "0.10"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_System_Threading", "Win32_System_Memory"] }
 
 [profile.release]
 opt-level = 3

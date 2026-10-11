@@ -300,10 +300,11 @@ public static class DataDirectoryMigration
             {
                 ct.ThrowIfCancellationRequested();
                 var name = Path.GetFileName(path);
-                // This pointer belongs to the stable settings location, and live diagnostic logs are
-                // unrelated to index state. All other files (including hidden files/journals) are copied.
+                // The stable settings pointer, live diagnostic logs and migration lease are
+                // process-local state. All other files (including hidden files/journals) are copied.
                 if (PathComparer.Equals(directory, source) &&
-                    (PathComparer.Equals(name, "ui-settings.json") || PathComparer.Equals(name, "logs"))) continue;
+                    (PathComparer.Equals(name, "ui-settings.json") || PathComparer.Equals(name, "logs") ||
+                     PathComparer.Equals(name, ".migration.lock"))) continue;
                 EnsureNoLinks(path);
                 var attributes = File.GetAttributes(path);
                 var relative = Path.GetRelativePath(source, path);

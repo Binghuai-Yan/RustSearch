@@ -235,11 +235,17 @@ impl App {
                     })
                 };
                 if let Some((text, pages, status)) = cached {
+                    if p.indexed_only && matches!(status, 1 | 3) {
+                        return Err(("EXTRACT_FAILED", "Indexed text is unavailable after an extraction failure; retry indexing".into()));
+                    }
                     return Ok(
                         json!({"path":path_utils::display_path(&path),"text":text,"truncated":false,
                         "needs_ocr":status==2,"ocr_pages":pages.iter().map(|(page,offset,length)|
                             json!({"page":page,"offset":offset,"length":length})).collect::<Vec<_>>() }),
                     );
+                }
+                if p.indexed_only {
+                    return Err(("EXTRACT_FAILED", "DOCUMENT_CHANGED: Indexed text is unavailable or the file changed; wait for indexing and search again".into()));
                 }
                 let result = builder::extract_file(&path)
                     .map_err(|e| ("EXTRACT_FAILED", format!("{e:#}")))?;

@@ -1,5 +1,7 @@
 **/target/
 **/bin/
+!rustsearch-backend/src/bin/
+!rustsearch-backend/src/bin/*.rs
 **/obj/
 **/artifacts/
 dist/

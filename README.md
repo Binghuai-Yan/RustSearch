@@ -49,6 +49,7 @@ Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。发
 ## 功能
 
 - 中文和英文全文搜索，300 ms 防抖；文件类型筛选、相关度/时间/大小排序、分页及最近搜索历史。
+- 标准 stdio MCP 接入：为 Claude Desktop、Codex 等客户端提供只读本地搜索、正文片段、OCR 页码和索引状态工具。设置“关于”页可复制客户端配置，详见 [MCP 接入说明](docs/mcp.md)。
 - 文件名、搜索片段和正文预览高亮；可拖动分隔条调整结果与预览宽度。
 - 添加、移除、重建索引目录，暂停/恢复索引，文件变化自动更新。后台索引期间保留当前搜索结果和选中项，手动刷新后展示新结果。
 - 浅色与深色主题、可选托盘驻留、自定义分词词典、忽略目录和最大文件大小设置。深色界面见[截图](https://github.com/Binghuai-Yan/RustSearch/blob/main/docs/screenshots/main-dark.png)。
@@ -101,7 +102,7 @@ GitHub Actions 在拉取请求中运行静态检查、Rust 测试及两个前端
 
 ## 开源项目与许可
 
-RustSearch 自有代码采用 [MIT License](LICENSE)。第三方组件保留各自的许可；下表列出项目直接使用的开源项目和构建工具。[完整第三方依赖清单](THIRD_PARTY_NOTICES.md)按锁定版本列出 309 个 Cargo 包和 20 个 NuGet 包，包括传递依赖、项目链接及其声明的许可。Windows App SDK 等 NuGet 二进制包的分发许可可能与源码许可不同，清单会标明包内许可文件。OCR 使用 [Tesseract](https://github.com/tesseract-ocr/tesseract)、[tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast) 和 [PDFium binaries](https://github.com/bblanchon/pdfium-binaries)，许可文件随发布包存放在 `Backend/OCR/`。
+RustSearch 自有代码采用 [MIT License](LICENSE)。第三方组件保留各自的许可；下表列出项目直接使用的开源项目和构建工具。[完整第三方依赖清单](THIRD_PARTY_NOTICES.md)按锁定版本列出 356 个 Cargo 包和 20 个 NuGet 包，包括传递依赖、项目链接及其声明的许可。Windows App SDK 等 NuGet 二进制包的分发许可可能与源码许可不同，清单会标明包内许可文件。OCR 使用 [Tesseract](https://github.com/tesseract-ocr/tesseract)、[tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast) 和 [PDFium binaries](https://github.com/bblanchon/pdfium-binaries)，许可文件随发布包存放在 `Backend/OCR/`。
 
 | 前端、资源与发行工具 | 用途 | 许可 |
 | --- | --- | --- |
@@ -144,5 +145,9 @@ Rust 后端的直接 crate：
 | [tracing](https://github.com/tokio-rs/tracing) | 诊断日志 | MIT |
 | [tracing-subscriber](https://github.com/tokio-rs/tracing) | 日志输出 | MIT |
 | [tempfile](https://github.com/Stebalien/tempfile) | 临时文件 | MIT OR Apache-2.0 |
+| [rmcp](https://github.com/modelcontextprotocol/rust-sdk) | 官方 MCP 协议 SDK | Apache-2.0 |
+| [Tokio](https://github.com/tokio-rs/tokio) | 异步进程、stdio 与本地命名管道 | MIT |
+| [sha2](https://github.com/RustCrypto/hashes) | 管道名称与文档标识散列 | MIT OR Apache-2.0 |
+| [windows-sys](https://github.com/microsoft/windows-rs) | 当前用户 SID 和管道访问权限 | MIT OR Apache-2.0 |
 
 CI 使用的 [checkout](https://github.com/actions/checkout)、[cache](https://github.com/actions/cache)、[setup-dotnet](https://github.com/actions/setup-dotnet)、[upload-artifact](https://github.com/actions/upload-artifact)、[rust-toolchain](https://github.com/dtolnay/rust-toolchain) 和 [action-gh-release](https://github.com/softprops/action-gh-release) 均采用 MIT。工作流固定到声明使用 Node.js 24 的 action 版本。

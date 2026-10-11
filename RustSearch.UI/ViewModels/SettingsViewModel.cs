@@ -20,6 +20,10 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         rpc.OnEvent += HandleEvent;
     }
     public ObservableCollection<IndexedRoot> Roots { get; } = [];
+    [RelayCommand]
+    private void CopyClaudeMcp() { Clipboard.SetText(McpConfiguration.Claude); StatusMessage = "Claude Desktop 配置已复制"; }
+    [RelayCommand]
+    private void CopyCodexMcp() { Clipboard.SetText(McpConfiguration.Codex); StatusMessage = "Codex 配置已复制"; }
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RemoveRootCommand))]
     [NotifyCanExecuteChangedFor(nameof(RebuildRootCommand))]
@@ -132,6 +136,8 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         var previous = AppPaths.DataDirectory;
         try
         {
+            using var migrationLease = new DataMigrationLease(previous);
+            await rpc.CallAsync<JsonElement>("app.prepare_migration");
             await backend.StopAsync();
             await DataDirectoryMigration.CopyAsync(previous, selected,
                 new Progress<MigrationProgress>(p =>

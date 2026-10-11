@@ -47,6 +47,7 @@ public sealed class BackendProcess : IDisposable
                 },
                 EnableRaisingEvents = true
             };
+            process.StartInfo.ArgumentList.Add("--connect");
             process.OutputDataReceived += (_, e) =>
             {
                 if (e.Data is not null) LineReceived?.Invoke(e.Data);

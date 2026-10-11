@@ -33,13 +33,13 @@ function Install-TestBuild([string]$LogName) {
     Run-Silent $installerPath "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /NOICONS /DIR=`"$installDirectory`" /LOG=`"$(Join-Path $testRoot $LogName)`""
     foreach ($relative in @('RustSearch.WinUI.exe', 'RustSearch.WinUI.pri', 'Backend\rustsearch-backend.exe',
             'Compat\RustSearch.UI.exe', 'Compat\Backend\rustsearch-backend.exe', 'unins000.exe',
-            'Backend\OCR\tesseract.exe', 'Backend\OCR\pdfium.dll',
+            'Backend\rustsearch-mcp.exe', 'Backend\OCR\tesseract.exe', 'Backend\OCR\pdfium.dll',
             'Backend\OCR\tessdata\chi_sim.traineddata', 'Backend\OCR\tessdata\eng.traineddata')) {
         if (-not (Test-Path -LiteralPath (Join-Path $installDirectory $relative) -PathType Leaf)) {
             throw "Installed file is missing: $relative"
         }
     }
-    foreach ($relative in @('RustSearch.WinUI.exe', 'RustSearch.WinUI.pri', 'Backend\rustsearch-backend.exe',
+    foreach ($relative in @('RustSearch.WinUI.exe', 'RustSearch.WinUI.pri', 'Backend\rustsearch-backend.exe', 'Backend\rustsearch-mcp.exe',
             'Compat\RustSearch.UI.exe', 'Compat\Backend\rustsearch-backend.exe')) {
         $expected = (Get-FileHash -LiteralPath (Join-Path $publishedPath $relative) -Algorithm SHA256).Hash
         $actual = (Get-FileHash -LiteralPath (Join-Path $installDirectory $relative) -Algorithm SHA256).Hash
@@ -75,6 +75,7 @@ function Uninstall-TestBuild([string]$LogName, [switch]$DeleteIndex) {
 try {
     Install-TestBuild 'install-preserve.log'
     Test-PackagedOcr
+    & (Join-Path $PSScriptRoot 'test-mcp.ps1') -Package $installDirectory
     & (Join-Path $PSScriptRoot 'test-winui.ps1') -Executable (Join-Path $installDirectory 'RustSearch.WinUI.exe')
     & (Join-Path $PSScriptRoot 'test-ui.ps1') -Executable (Join-Path $installDirectory 'Compat\RustSearch.UI.exe') -Packaged
     Write-Output 'PASS: installer files match the portable build and both frontends start with their bundled backend.'
