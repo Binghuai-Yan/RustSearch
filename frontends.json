@@ -1,0 +1,19 @@
+{
+  "contract_version": 1,
+  "page_size": 50,
+  "filters": [
+    { "label": "全部类型", "extensions": [] },
+    { "label": "PDF", "extensions": ["pdf"] },
+    { "label": "Office", "extensions": ["docx", "xlsx", "xls", "xlsb", "pptx"] },
+    { "label": "文本", "extensions": ["txt", "md", "log", "csv", "json", "xml", "yaml", "yml", "ini"] },
+    { "label": "代码", "extensions": ["rs", "py", "js", "ts", "tsx", "jsx", "cs", "c", "cpp", "h", "java", "go", "sql", "html", "css"] },
+    { "label": "EPUB", "extensions": ["epub"] },
+    { "label": "图片", "extensions": ["png", "jpg", "jpeg", "bmp", "tif", "tiff"] }
+  ],
+  "features": ["search", "preview", "history", "file-actions", "roots", "pause-resume", "ocr", "dictionary", "theme", "tray", "data-migration", "mcp"],
+  "frontends": [
+    { "name": "WinUI", "project": "RustSearch.WinUI/RustSearch.WinUI.csproj", "executable": "RustSearch.WinUI.exe", "app_id": "{7A55EDDF-1CB8-4400-99EB-21209EC1E6DD}", "install_directory": "RustSearch" },
+    { "name": "WPF", "project": "RustSearch.UI/RustSearch.UI.csproj", "executable": "RustSearch.UI.exe", "app_id": "{B021EC86-4D28-4D8C-97FA-9165358C78AA}", "install_directory": "RustSearch-WPF" },
+    { "name": "Tauri", "project": "RustSearch.Tauri", "executable": "rustsearch-tauri.exe", "app_id": "{3D617544-1705-41BC-BA28-80DFED05E295}", "install_directory": "RustSearch-Tauri" }
+  ]
+}

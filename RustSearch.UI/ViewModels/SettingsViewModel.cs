@@ -12,6 +12,12 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
     private readonly JsonRpcClient rpc;
     private readonly MainViewModel main;
     private readonly BackendProcess backend;
+    private CancellationTokenSource? migrationCancellation;
+    public bool IsMigrating => migrationCancellation is not null;
+    [ObservableProperty] private bool _migrateData = true;
+    [ObservableProperty] private string _targetDataDirectory = "";
+    [ObservableProperty] private string _mcpStatus = "";
+    [RelayCommand] private void CancelMigration() => migrationCancellation?.Cancel();
     public SettingsViewModel(JsonRpcClient client, MainViewModel mainViewModel, BackendProcess backendProcess)
     {
         rpc = client;
@@ -45,6 +51,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
     [NotifyCanExecuteChangedFor(nameof(RebuildRootCommand))]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     [NotifyCanExecuteChangedFor(nameof(ChangeDataDirectoryCommand))]
+    [NotifyCanExecuteChangedFor(nameof(BrowseDataDirectoryCommand))]
     private bool _isBusy;
     [ObservableProperty] private string _statusMessage = "";
     [ObservableProperty] private string _statistics = "";
@@ -61,22 +68,28 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         IsBusy = true;
         try
         {
-            var config = await rpc.CallAsync<AppConfig>("config.get");
-            MaxFileSizeMb = config.MaxFileSizeMb;
-            SkipDirectories = string.Join(Environment.NewLine, config.SkipDirs ?? []);
-            UserDictionary = config.UserDictionary;
-            OcrEnabled = config.OcrEnabled;
-            OcrImages = config.OcrImages;
-            OcrPdf = config.OcrPdf;
-            OcrMaxPages = config.OcrMaxPages;
-            Paused = config.Paused;
-            CloseToTray = UserPreferences.CloseToTray;
-            DataDirectory = AppPaths.DataDirectory;
-            SelectedTheme = ThemeManager.Current == AppTheme.Dark ? "深色" : "浅色";
+            await LoadConfigurationAsync();
             await RefreshAsync();
         }
         catch (Exception ex) { StatusMessage = MainViewModel.ErrorText(ex); }
         finally { IsBusy = false; }
+    }
+
+    private async Task LoadConfigurationAsync()
+    {
+        var config = await rpc.CallAsync<AppConfig>("config.get");
+        MaxFileSizeMb = config.MaxFileSizeMb;
+        SkipDirectories = string.Join(Environment.NewLine, config.SkipDirs ?? []);
+        UserDictionary = config.UserDictionary;
+        OcrEnabled = config.OcrEnabled;
+        OcrImages = config.OcrImages;
+        OcrPdf = config.OcrPdf;
+        OcrMaxPages = config.OcrMaxPages;
+        Paused = config.Paused;
+        CloseToTray = UserPreferences.CloseToTray;
+        DataDirectory = AppPaths.DataDirectory;
+        ThemeManager.LoadAndApply();
+        SelectedTheme = ThemeManager.Current == AppTheme.Dark ? "深色" : "浅色";
     }
 
     [RelayCommand]
@@ -93,6 +106,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
             Statistics = $"{stats.TotalDocs:N0} 个文档 · {stats.FailedDocs:N0} 个提取失败 · 索引 {Formatting.Bytes(stats.IndexSizeBytes)}";
             OcrState = $"待识别 {stats.OcrPending:N0} 个 · 失败 {stats.OcrFailed:N0} 个";
             Version = stats.Version;
+            McpStatus = File.Exists(McpConfiguration.Executable) ? $"MCP 已安装 · 引擎连接 {stats.ActiveClients} 个 · PID {stats.EnginePid}\n{McpConfiguration.Executable}" : "MCP 程序未打包，请重新构建。";
             Paused = stats.Paused;
         }
         catch (Exception ex) { StatusMessage = MainViewModel.ErrorText(ex); }
@@ -113,43 +127,66 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand(CanExecute = nameof(CanEdit))]
-    private async Task ChangeDataDirectoryAsync()
+    private void BrowseDataDirectory()
     {
         var dialog = new OpenFolderDialog { Title = "选择索引数据存储目录", Multiselect = false };
-        if (dialog.ShowDialog() != true) return;
-        var selected = Path.GetFullPath(dialog.FolderName);
+        if (dialog.ShowDialog() == true) TargetDataDirectory = dialog.FolderName;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanEdit))]
+    private async Task ChangeDataDirectoryAsync()
+    {
+        if (string.IsNullOrWhiteSpace(TargetDataDirectory)) BrowseDataDirectory();
+        if (string.IsNullOrWhiteSpace(TargetDataDirectory)) return;
+        string selected;
+        try
+        {
+            if (!Path.IsPathFullyQualified(TargetDataDirectory.Trim())) throw new IOException("请输入完整的数据目录路径。");
+            selected = Path.GetFullPath(TargetDataDirectory.Trim());
+        }
+        catch (Exception ex) { StatusMessage = MainViewModel.ErrorText(ex); return; }
+        var migrate = MigrateData;
         if (string.Equals(selected, AppPaths.DataDirectory, StringComparison.OrdinalIgnoreCase))
         {
             StatusMessage = "数据目录未更改";
             return;
         }
 
-        try { DataDirectoryMigration.Validate(AppPaths.DataDirectory, selected); }
+        try { if (migrate) DataDirectoryMigration.Validate(AppPaths.DataDirectory, selected); }
         catch (Exception ex) { StatusMessage = MainViewModel.ErrorText(ex); return; }
         if (MessageBox.Show(
-                $"将当前索引和设置迁移到：\n\n{selected}\n\n目标文件夹必须为空。验证新目录后会清理原目录中的索引和已迁移配置。是否继续？",
+                migrate ? $"将当前索引和设置迁移到：\n\n{selected}\n\n目标文件夹必须为空。验证新目录后会清理原目录中的索引和已迁移配置。是否继续？" : $"切换到：\n\n{selected}\n\n加载目标目录的数据和设置，原目录的数据保留。是否继续？",
                 "迁移数据目录", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
 
         IsBusy = true;
         StatusMessage = "正在迁移数据目录";
         var previous = AppPaths.DataDirectory;
+        using var cancellation = new CancellationTokenSource();
+        migrationCancellation = cancellation;
+        DataMigrationLease? migrationLease = null;
         try
         {
-            using var migrationLease = new DataMigrationLease(previous);
+            migrationLease = new DataMigrationLease(previous);
             await rpc.CallAsync<JsonElement>("app.prepare_migration");
             await backend.StopAsync();
-            await DataDirectoryMigration.CopyAsync(previous, selected,
+            if (migrate) await DataDirectoryMigration.CopyAsync(previous, selected,
                 new Progress<MigrationProgress>(p =>
-                    StatusMessage = $"正在复制并校验 · {Formatting.Bytes(p.CopiedBytes)} / {Formatting.Bytes(p.TotalBytes)} · {p.CopiedFiles}/{p.TotalFiles} 个文件"));
+                    StatusMessage = $"正在复制并校验 · {Formatting.Bytes(p.CopiedBytes)} / {Formatting.Bytes(p.TotalBytes)} · {p.CopiedFiles}/{p.TotalFiles} 个文件"), cancellation.Token);
+            cancellation.Token.ThrowIfCancellationRequested();
             AppPaths.SetDataDirectory(selected);
             await backend.RestartAsync();
+            await rpc.CallAsync<JsonElement>("app.stats", ct: cancellation.Token);
+            await LoadConfigurationAsync();
+            cancellation.Token.ThrowIfCancellationRequested();
             DataDirectory = AppPaths.DataDirectory;
+            TargetDataDirectory = "";
             StatusMessage = "数据目录已更换";
             await RefreshAsync();
             await main.RefreshStatsAsync();
             await main.RefreshSearchCommand.ExecuteAsync(null);
-            try { await DataDirectoryMigration.RemoveMigratedSourceAsync(previous, selected); }
+            cancellation.Token.ThrowIfCancellationRequested();
+            try { if (migrate) await DataDirectoryMigration.RemoveMigratedSourceAsync(previous, selected); }
             catch (Exception cleanupError) { StatusMessage = $"迁移完成，但清理原目录失败：{MainViewModel.ErrorText(cleanupError)}"; }
         }
         catch (Exception ex)
@@ -158,12 +195,14 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
             {
                 await backend.StopAsync();
                 AppPaths.SetDataDirectory(previous);
+                migrationLease?.Dispose();
                 await backend.RestartAsync();
+                await LoadConfigurationAsync();
             }
             catch (Exception rollback) { StatusMessage = $"迁移失败且恢复原目录失败：{rollback.Message}"; return; }
             StatusMessage = ex is OperationCanceledException ? "迁移已取消，仍使用原目录。" : $"迁移失败，已恢复原目录：{MainViewModel.ErrorText(ex)}";
         }
-        finally { IsBusy = false; }
+        finally { migrationLease?.Dispose(); migrationCancellation = null; IsBusy = false; }
     }
 
     [RelayCommand(CanExecute = nameof(CanEditRoot))]
@@ -210,7 +249,6 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
                 max_file_size_mb = MaxFileSizeMb,
                 skip_dirs = skip,
                 user_dictionary = UserDictionary,
-                paused = Paused,
                 ocr_enabled = OcrEnabled,
                 ocr_images = OcrImages,
                 ocr_pdf = OcrPdf,

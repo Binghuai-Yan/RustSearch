@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "Local search window: events and folder selection only.",
+  "windows": ["main"],
+  "permissions": ["core:event:default", "dialog:allow-open"]
+}

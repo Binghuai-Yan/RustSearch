@@ -1,11 +1,11 @@
 #ifndef AppVersion
-  #define AppVersion "0.1.8"
+  #error AppVersion must be supplied by build.ps1
 #endif
 #ifndef AppExeName
   #define AppExeName "RustSearch.WinUI.exe"
 #endif
 #ifndef PublishDir
-  #define PublishDir "..\dist\RustSearch"
+  #define PublishDir "..\dist\RustSearch-WinUI"
 #endif
 #ifndef InstallerOutputDir
   #define InstallerOutputDir "..\dist"
@@ -14,14 +14,24 @@
   #define InstallerBaseName "RustSearch-" + AppVersion + "-win-x64-setup"
 #endif
 
+#ifndef FrontendName
+  #define FrontendName "WinUI"
+#endif
+#ifndef FrontendAppId
+  #define FrontendAppId "{7A55EDDF-1CB8-4400-99EB-21209EC1E6DD}"
+#endif
+#ifndef InstallDirectoryName
+  #define InstallDirectoryName "RustSearch"
+#endif
+
 [Setup]
-AppId={{7A55EDDF-1CB8-4400-99EB-21209EC1E6DD}
-AppName=RustSearch
+AppId={{#FrontendAppId}
+AppName=RustSearch {#FrontendName}
 AppVersion={#AppVersion}
-AppVerName=RustSearch {#AppVersion}
+AppVerName=RustSearch {#FrontendName} {#AppVersion}
 AppPublisher=RustSearch
-DefaultDirName={localappdata}\Programs\RustSearch
-DefaultGroupName=RustSearch
+DefaultDirName={localappdata}\Programs\{#InstallDirectoryName}
+DefaultGroupName=RustSearch {#FrontendName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
@@ -53,9 +63,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\RustSearch"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\Assets\RustSearch.ico"
-Name: "{group}\RustSearch 输入法兼容界面"; Filename: "{app}\Compat\RustSearch.UI.exe"; IconFilename: "{app}\Assets\RustSearch.ico"; Check: IsWinUIBuild
-Name: "{autodesktop}\RustSearch"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\Assets\RustSearch.ico"; Tasks: desktopicon
+Name: "{group}\RustSearch {#FrontendName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\Assets\RustSearch.ico"
+Name: "{autodesktop}\RustSearch {#FrontendName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\Assets\RustSearch.ico"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,RustSearch}"; Flags: nowait postinstall skipifsilent
@@ -63,11 +72,6 @@ Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,RustSearch}"; F
 [Code]
 var
   DeleteUserIndex: Boolean;
-
-function IsWinUIBuild(): Boolean;
-begin
-  Result := FileExists(ExpandConstant('{app}\Compat\RustSearch.UI.exe'));
-end;
 
 function HasDeleteIndexSwitch(): Boolean;
 var
@@ -87,10 +91,8 @@ var
   ResultCode: Integer;
 begin
   Result := True;
-  if FileExists(ExpandConstant('{app}\RustSearch.WinUI.exe')) then
-    Exec(ExpandConstant('{app}\RustSearch.WinUI.exe'), '--exit', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  if FileExists(ExpandConstant('{app}\Compat\RustSearch.UI.exe')) then
-    Exec(ExpandConstant('{app}\Compat\RustSearch.UI.exe'), '--exit', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if FileExists(ExpandConstant('{app}\{#AppExeName}')) then
+    Exec(ExpandConstant('{app}\{#AppExeName}'), '--exit', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Sleep(1500);
   DeleteUserIndex := HasDeleteIndexSwitch();
   if not DeleteUserIndex and not UninstallSilent then

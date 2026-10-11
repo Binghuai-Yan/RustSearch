@@ -21,6 +21,48 @@ struct Desktop {
     output: tokio::io::Lines<BufReader<ChildStdout>>,
     id: u64,
 }
+
+#[tokio::test]
+async fn rapid_desktop_handoff_waits_for_the_previous_engine() {
+    let temp = tempfile::tempdir().unwrap();
+    for _ in 0..12 {
+        let mut desktop = Desktop::start(temp.path());
+        assert_eq!(desktop.call("app.stats", json!({})).await["ok"], true);
+        // Exercise both abrupt disconnect and an immediate reconnect while
+        // the broker is acknowledging graceful shutdown.
+        assert_eq!(desktop.call("app.shutdown", json!({})).await["ok"], true);
+        let mut next = Desktop::start(temp.path());
+        assert_eq!(next.call("app.stats", json!({})).await["ok"], true);
+        next.child.kill().await.unwrap();
+        next.child.wait().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn dead_engine_exits_stdio_bridge_even_with_stdin_open() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut desktop = Desktop::start(temp.path());
+    let stats = desktop.call("app.stats", json!({})).await;
+    let pid = stats["result"]["engine_pid"].as_u64().unwrap();
+    let status = Command::new("taskkill")
+        .args(["/PID", &pid.to_string(), "/F"])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .await
+        .unwrap();
+    assert!(status.success());
+    tokio::time::timeout(std::time::Duration::from_secs(10), desktop.child.wait())
+        .await
+        .expect("bridge must not wait for its frontend to close stdin")
+        .unwrap();
+    let mut replacement = Desktop::start(temp.path());
+    assert_eq!(replacement.call("app.stats", json!({})).await["ok"], true);
+    assert_eq!(
+        replacement.call("app.shutdown", json!({})).await["ok"],
+        true
+    );
+}
 impl Desktop {
     fn start(dir: &std::path::Path) -> Self {
         let mut child = Command::new(backend())

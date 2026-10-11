@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "RustSearch Tauri",
+  "version": "0.1.9",
+  "identifier": "com.rustsearch.tauri",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:5173",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [{
+      "label": "main",
+      "title": "RustSearch",
+      "width": 1280,
+      "height": 820,
+      "minWidth": 920,
+      "minHeight": 620,
+      "center": true,
+      "backgroundColor": "#f6f7f9"
+    }],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; frame-src 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
+    "resources": { "resources/Backend/": "Backend/", "../THIRD_PARTY_NOTICES.md": "TAURI_THIRD_PARTY_NOTICES.md" },
+    "shortDescription": "本地全文搜索工具",
+    "category": "Utility",
+    "windows": { "nsis": { "languages": ["SimpChinese", "English"], "displayLanguageSelector": true } }
+  }
+}

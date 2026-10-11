@@ -27,19 +27,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private bool _refreshInProgress;
     private int _page;
     private long _totalHits;
-    private const int PageSize = 50;
+    private static readonly int PageSize = SearchOptions.PageSize;
 
     public ObservableCollection<SearchHit> Results { get; } = [];
     public ObservableCollection<string> History { get; } = [];
-    public IReadOnlyList<FilterOption> Types { get; } =
-    [
-        new("全部类型", []), new("PDF", ["pdf"]),
-        new("Office", ["docx", "xlsx", "xls", "xlsb", "pptx"]),
-        new("文本", ["txt", "md", "log", "csv", "json", "xml", "yaml", "yml", "ini"]),
-        new("代码", ["rs", "py", "js", "ts", "tsx", "jsx", "cs", "c", "cpp", "h", "java", "go", "sql", "html", "css"]),
-        new("EPUB", ["epub"]),
-        new("图片", ["png", "jpg", "jpeg", "bmp", "tif", "tiff"])
-    ];
+    public IReadOnlyList<FilterOption> Types { get; } = SearchOptions.Filters;
     public IReadOnlyList<SortOption> Sorts { get; } =
     [new("相关度", "relevance"), new("修改时间 ↓", "mtime_desc"), new("文件大小 ↓", "size_desc"), new("文件大小 ↑", "size_asc")];
 

@@ -1,0 +1,22 @@
+:root {
+  color-scheme: light;
+  --canvas: #f7f8fa; --surface: #fff; --sidebar: #f1f3f7; --text: #253146;
+  --body-text: #4a566a; --muted: #7a8597; --faint: #929bad; --border: #e7eaf0;
+  --border-strong: #d6dce6; --accent: #4b6bd6; --accent-hover: #3a58bd;
+  --accent-soft: #e9eefc; --accent-border: #d7e0fa; --selected: #f0f4ff; --hover: #f5f7fa;
+  --highlight: #fff0be; --highlight-text: #85651f; --file-bg: #edf1fc;
+  --pdf-bg: #fff0ed; --sheet-bg: #eaf7f1; --folder-bg: #fff5df;
+  --error-bg: #fff2f1; --error-text: #b74444; --error-border: #f5d8d5;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --canvas: #161a23; --surface: #1e2430; --sidebar: #191e28; --text: #e0e6f1;
+  --body-text: #bcc5d7; --muted: #9ca8bc; --faint: #78869d; --border: #2c3443;
+  --border-strong: #424d62; --accent: #8fa8ff; --accent-hover: #748de9;
+  --accent-soft: #2a3655; --accent-border: #37496f; --selected: #283348; --hover: #262d3b;
+  --highlight: #574c2e; --highlight-text: #ffe099; --file-bg: #2b3650;
+  --pdf-bg: #453031; --sheet-bg: #243f37; --folder-bg: #443c2b;
+  --error-bg: #40282e; --error-text: #ffb3b3; --error-border: #613840;
+}
+:root[data-theme='dark'] .primary, :root[data-theme='dark'] .brand-icon { color: #172342; }
+:root[data-theme='dark'] .destructive { color: #fff; }

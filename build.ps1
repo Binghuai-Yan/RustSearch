@@ -1,123 +1,130 @@
+#requires -Version 7.0
 param(
     [string]$Version,
-    [switch]$SelfContained,
-    [switch]$SkipTests,
-    [switch]$SkipUITests,
-    [switch]$TestInstaller,
-    [switch]$SkipInstaller,
-    [switch]$WPF
+    [ValidateSet('WinUI','WPF','Tauri')][string[]]$Frontend = @('WinUI','WPF','Tauri'),
+    [switch]$SelfContained, # All release packages are now self-contained.
+    [switch]$SkipTests, [switch]$SkipUITests, [switch]$TestInstaller, [switch]$SkipInstaller,
+    [switch]$WPF # Legacy alias for -Frontend WPF.
 )
 $ErrorActionPreference = 'Stop'
-if (-not $Version) { $Version = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'VERSION') -Raw).Trim() }
-if ($Version -notmatch '^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$') { throw 'Version must be a semantic version such as 0.1.0' }
+if ($WPF) { $Frontend = @('WPF') }
+$Frontend = @($Frontend | Select-Object -Unique)
+$sourceVersion = (Get-Content (Join-Path $PSScriptRoot VERSION) -Raw).Trim()
+if (-not $Version) { $Version = $sourceVersion }
+if ($Version -ne $sourceVersion) { throw 'Run scripts/sync-version.ps1 -Version first.' }
+& (Join-Path $PSScriptRoot scripts/sync-version.ps1) -Check
+$contract = Get-Content (Join-Path $PSScriptRoot frontends.json) -Raw | ConvertFrom-Json
+$selected = @($contract.frontends | Where-Object name -In $Frontend)
 $cargoCommand = Get-Command cargo -ErrorAction SilentlyContinue
-$cargo = if ($cargoCommand) { $cargoCommand.Source } else { Join-Path $env:USERPROFILE '.cargo\bin\cargo.exe' }
-if (-not (Test-Path -LiteralPath $cargo)) { throw 'Install Rust stable MSVC with rustup first.' }
+$cargo = if ($cargoCommand) { $cargoCommand.Source } else { Join-Path $env:USERPROFILE '.cargo/bin/cargo.exe' }
+if (-not (Test-Path -LiteralPath $cargo)) { throw 'Install Rust stable MSVC first.' }
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { throw 'Install .NET SDK 8 or later first.' }
-$backend = Join-Path $PSScriptRoot 'rustsearch-backend'
-$output = Join-Path $PSScriptRoot 'dist\RustSearch'
-$oldVersion = $env:RUSTSEARCH_VERSION
-$oldCargoHome = $env:CARGO_HOME
-$oldNuGetPackages = $env:NUGET_PACKAGES
-$oldNuGetHttpCache = $env:NUGET_HTTP_CACHE_PATH
-$oldNuGetScratch = $env:NUGET_SCRATCH
-$oldOcrRuntime = $env:RUSTSEARCH_OCR_RUNTIME_DIR
+if ('Tauri' -in $Frontend -and -not (Get-Command npm.cmd -ErrorAction SilentlyContinue)) { throw 'Install Node.js 22.12+ first.' }
+$dist = Join-Path $PSScriptRoot dist
+$backend = Join-Path $PSScriptRoot rustsearch-backend
+$savedEnvironment = @{}
+foreach ($key in @('PATH','RUSTSEARCH_VERSION','CARGO_HOME','NUGET_PACKAGES','NUGET_HTTP_CACHE_PATH','NUGET_SCRATCH','RUSTSEARCH_OCR_RUNTIME_DIR','RUSTSEARCH_TEST_TAURI')) { $savedEnvironment[$key] = [Environment]::GetEnvironmentVariable($key) }
+function Assert-Exit([string]$Operation) { if ($LASTEXITCODE -ne 0) { throw "$Operation failed (exit $LASTEXITCODE)." } }
+function Reset-PublishDirectory([string]$Directory) {
+    $resolved = [IO.Path]::GetFullPath($Directory)
+    $allowed = @($contract.frontends | ForEach-Object { [IO.Path]::GetFullPath((Join-Path $dist "RustSearch-$($_.name)")) })
+    if ($resolved -notin $allowed) { throw "Refusing to clean unexpected directory: $resolved" }
+    if (Test-Path -LiteralPath $resolved) {
+        if ((Get-Item -LiteralPath $resolved).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Publish directory cannot be a link.' }
+        Remove-Item -LiteralPath $resolved -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $resolved -Force | Out-Null
+}
 try {
-    . (Join-Path $PSScriptRoot 'scripts\use-dependency-cache.ps1')
+    . (Join-Path $PSScriptRoot scripts/use-dependency-cache.ps1)
+    $env:PATH = (Split-Path $cargo -Parent) + ';' + $env:PATH
     $env:RUSTSEARCH_VERSION = $Version
-    $ocrRuntime = & (Join-Path $PSScriptRoot 'scripts\prepare-ocr-runtime.ps1')
-    $env:RUSTSEARCH_OCR_RUNTIME_DIR = $ocrRuntime
-    Push-Location $backend
-    try {
-        if (-not $SkipTests) {
-            & $cargo test --locked
-            if ($LASTEXITCODE -ne 0) { throw 'Rust tests failed' }
-        }
-        & $cargo build --release --locked
-        if ($LASTEXITCODE -ne 0) { throw 'Rust release build failed' }
-    } finally { Pop-Location }
-    # WinUI unpackaged builds carry the Windows App SDK runtime alongside the exe.
-    $useWinUI = -not $WPF
-    $framework = if ($SelfContained -or $useWinUI) { 'true' } else { 'false' }
-    $uiProject = if ($useWinUI) { 'RustSearch.WinUI\RustSearch.WinUI.csproj' } else { 'RustSearch.UI\RustSearch.UI.csproj' }
-    if (Test-Path -LiteralPath $output) {
-        $resolvedOutput = (Resolve-Path -LiteralPath $output).ProviderPath
-        if ($resolvedOutput -ne [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'dist\RustSearch'))) {
-            throw 'Refusing to clean an unexpected publish directory.'
-        }
-        Get-ChildItem -LiteralPath $resolvedOutput -Force | Remove-Item -Recurse -Force
-    }
-    $publishArgs = @('-c', 'Release', '-r', 'win-x64', '--self-contained', $framework, "-p:Version=$Version")
-    if ($useWinUI) { $publishArgs += '-p:WindowsPackageType=None' }
-    $publishArgs += @('-o', $output)
-    & dotnet publish (Join-Path $PSScriptRoot $uiProject) @publishArgs
-    if ($LASTEXITCODE -ne 0) { throw '.NET publish failed' }
-    if ($useWinUI -and -not (Test-Path -LiteralPath (Join-Path $output 'RustSearch.WinUI.pri') -PathType Leaf)) {
-        throw 'WinUI publish is missing RustSearch.WinUI.pri; XAML cannot start without its application resources.'
-    }
-    $backendOutput = Join-Path $output 'Backend'
-    New-Item -ItemType Directory -Path $backendOutput -Force | Out-Null
-    Copy-Item -LiteralPath (Join-Path $backend 'target\release\rustsearch-backend.exe') -Destination $backendOutput -Force
-    Copy-Item -LiteralPath (Join-Path $backend 'target\release\rustsearch-mcp.exe') -Destination $backendOutput -Force
-    Copy-Item -LiteralPath $ocrRuntime -Destination (Join-Path $backendOutput 'OCR') -Recurse -Force
-    if ($useWinUI) {
-        $compatOutput = Join-Path $output 'Compat'
-        & dotnet publish (Join-Path $PSScriptRoot 'RustSearch.UI\RustSearch.UI.csproj') -c Release -r win-x64 --self-contained true "-p:Version=$Version" -o $compatOutput
-        if ($LASTEXITCODE -ne 0) { throw 'WPF compatibility frontend publish failed' }
-        if (-not (Test-Path -LiteralPath (Join-Path $compatOutput 'RustSearch.UI.exe') -PathType Leaf)) {
-            throw 'WPF compatibility frontend executable is missing'
-        }
-        $compatBackend = Join-Path $compatOutput 'Backend'
-        New-Item -ItemType Directory -Path $compatBackend -Force | Out-Null
-        Copy-Item -LiteralPath (Join-Path $backendOutput 'rustsearch-backend.exe') -Destination $compatBackend -Force
-    }
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.md') -Destination $output -Force
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LICENSE') -Destination $output -Force
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'THIRD_PARTY_NOTICES.md') -Destination $output -Force
-    New-Item -ItemType Directory -Path (Join-Path $output 'docs') -Force | Out-Null
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\verification.md') -Destination (Join-Path $output 'docs') -Force
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\fluent-redesign.md') -Destination (Join-Path $output 'docs') -Force
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\review-2026-10.md') -Destination (Join-Path $output 'docs') -Force
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\ocr-design.md') -Destination (Join-Path $output 'docs') -Force
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\mcp.md') -Destination (Join-Path $output 'docs') -Force
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\releases') -Destination (Join-Path $output 'docs') -Recurse -Force
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\screenshots') -Destination (Join-Path $output 'docs') -Recurse -Force
-    $manifest = [ordered]@{ name = 'RustSearch'; version = $Version; frontend = if ($useWinUI) { 'WinUI 3' } else { 'WPF' }; runtime = 'win-x64'; self_contained = ($framework -eq 'true'); built_at = [DateTimeOffset]::UtcNow.ToString('O') }
-    $manifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'release.json') -Encoding utf8
-    if ($useWinUI -and -not $SkipTests -and -not $SkipUITests) {
-        & (Join-Path $PSScriptRoot 'scripts\test-winui.ps1') -Executable (Join-Path $output 'RustSearch.WinUI.exe')
-        & (Join-Path $PSScriptRoot 'scripts\test-winui-features.ps1') -Executable (Join-Path $output 'RustSearch.WinUI.exe')
-        & (Join-Path $PSScriptRoot 'scripts\test-winui-visual.ps1') -Executable (Join-Path $output 'RustSearch.WinUI.exe')
-        & (Join-Path $PSScriptRoot 'scripts\test-ui.ps1') -Executable (Join-Path $compatOutput 'RustSearch.UI.exe') -Packaged
-    }
-    Compress-Archive -Path "$output\*" -DestinationPath (Join-Path $PSScriptRoot "dist\RustSearch-$Version-win-x64.zip") -Force
-    $uiExe = if ($useWinUI) { 'RustSearch.WinUI.exe' } else { 'RustSearch.UI.exe' }
+    $env:RUSTSEARCH_OCR_RUNTIME_DIR = & (Join-Path $PSScriptRoot scripts/prepare-ocr-runtime.ps1)
     if (-not $SkipInstaller) {
-        $compilerCandidates = @(
-            $env:RUSTSEARCH_INNO_ISCC,
-            'E:\cache\RustSearch-Dependencies\inno-setup\compiler\ISCC.exe',
-            'C:\Program Files (x86)\Inno Setup 6\ISCC.exe',
-            'C:\Program Files\Inno Setup 6\ISCC.exe'
-        )
-        $innoCompiler = $compilerCandidates | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) } | Select-Object -First 1
-        if (-not $innoCompiler) { throw 'Inno Setup 6 compiler (ISCC.exe) is required for the installer. Use -SkipInstaller for ZIP only.' }
-        $installerName = "RustSearch-$Version-win-x64-setup"
-        if ($WPF) { $installerName += '-wpf' }
-        & $innoCompiler '/Qp' "/DAppVersion=$Version" "/DAppExeName=$uiExe" "/DPublishDir=$output" "/DInstallerOutputDir=$(Join-Path $PSScriptRoot 'dist')" "/DInstallerBaseName=$installerName" (Join-Path $PSScriptRoot 'installer\RustSearch.iss')
-        if ($LASTEXITCODE -ne 0) { throw 'Inno Setup compilation failed' }
-        if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot "dist\$installerName.exe") -PathType Leaf)) { throw 'Installer output is missing.' }
-        if ($TestInstaller -and $useWinUI -and -not $SkipTests -and -not $SkipUITests) {
-            & (Join-Path $PSScriptRoot 'scripts\test-installer.ps1') -Installer (Join-Path $PSScriptRoot "dist\$installerName.exe") -Published $output
-        }
-        Write-Output "Installer ready: $(Join-Path $PSScriptRoot "dist\$installerName.exe")"
+        $innoCompiler = @($env:RUSTSEARCH_INNO_ISCC,'E:/cache/RustSearch-Dependencies/inno-setup/compiler/ISCC.exe','C:/Program Files (x86)/Inno Setup 6/ISCC.exe','C:/Program Files/Inno Setup 6/ISCC.exe') | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) } | Select-Object -First 1
+        if (-not $innoCompiler) { throw 'Install Inno Setup 6 or use -SkipInstaller.' }
     }
-    Write-Output "Portable ZIP ready: $(Join-Path $PSScriptRoot "dist\RustSearch-$Version-win-x64.zip")"
-    Write-Output "Release ready: $(Join-Path $output $uiExe)"
+    if (-not $SkipTests) {
+        & $cargo test --manifest-path (Join-Path $backend Cargo.toml) --locked
+        Assert-Exit 'Backend tests'
+        & (Join-Path $PSScriptRoot scripts/test-data-migration.ps1) -SkipBackend
+    }
+    & $cargo build --release --locked --manifest-path (Join-Path $backend Cargo.toml)
+    Assert-Exit 'Backend release build'
+    if ('Tauri' -in $Frontend) {
+        Push-Location (Join-Path $PSScriptRoot RustSearch.Tauri)
+        try {
+            & npm.cmd ci
+            Assert-Exit 'Frontend dependency install'
+            if (-not $SkipTests) { & npm.cmd test; Assert-Exit 'Frontend tests' }
+            & ./scripts/desktop.ps1 -Release -PrepareOnly -ReuseBackend
+            & npm.cmd run tauri -- build --no-bundle -- --locked
+            Assert-Exit 'Tauri release build'
+        } finally { Pop-Location }
+    }
+    # Build all frontends before generating public archives.
+    foreach ($item in $selected) {
+        $output = Join-Path $dist "RustSearch-$($item.name)"
+        Reset-PublishDirectory $output
+        if ($item.name -eq 'Tauri') {
+            Copy-Item -LiteralPath (Join-Path $PSScriptRoot RustSearch.Tauri/src-tauri/target/release/rustsearch-tauri.exe) -Destination $output
+            Copy-Item -LiteralPath (Join-Path $PSScriptRoot RustSearch.Tauri/THIRD_PARTY_NOTICES.md) -Destination (Join-Path $output TAURI_THIRD_PARTY_NOTICES.md)
+        } else {
+            $publishArgs = @('publish',(Join-Path $PSScriptRoot $item.project),'-c','Release','-r','win-x64','--self-contained','true',"-p:Version=$Version",'-o',$output)
+            if ($item.name -eq 'WinUI') { $publishArgs += '-p:WindowsPackageType=None' }
+            & dotnet @publishArgs
+            Assert-Exit "$($item.name) publish"
+        }
+        $backendOutput = Join-Path $output Backend
+        New-Item -ItemType Directory -Path $backendOutput -Force | Out-Null
+        foreach ($exe in @('rustsearch-backend.exe','rustsearch-mcp.exe')) { Copy-Item -LiteralPath (Join-Path $backend "target/release/$exe") -Destination $backendOutput }
+        Copy-Item -LiteralPath $env:RUSTSEARCH_OCR_RUNTIME_DIR -Destination (Join-Path $backendOutput OCR) -Recurse
+        if ($item.name -eq 'Tauri') { Copy-Item -Path (Join-Path $PSScriptRoot 'RustSearch.Tauri/src-tauri/resources/Backend/RustSearch.MigrationHost*') -Destination $backendOutput }
+        New-Item -ItemType Directory -Path (Join-Path $output Assets) -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot RustSearch.UI/Assets/RustSearch.ico) -Destination (Join-Path $output Assets) -Force
+        foreach ($file in @('README.md','LICENSE','THIRD_PARTY_NOTICES.md','frontends.json')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination $output }
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot docs) -Destination $output -Recurse
+        [ordered]@{ name='RustSearch'; version=$Version; frontend=$item.name; executable=$item.executable; runtime='win-x64'; self_contained=$true; contract_version=$contract.contract_version; features=$contract.features; page_size=$contract.page_size; built_at=[DateTimeOffset]::UtcNow.ToString('O') } | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $output release.json) -Encoding utf8
+    }
+    & (Join-Path $PSScriptRoot scripts/test-release-packages.ps1) -Frontend $Frontend -SkipArchives
+    if (-not $SkipTests) {
+        foreach ($item in $selected) { & (Join-Path $PSScriptRoot scripts/test-mcp.ps1) -Package (Join-Path $dist "RustSearch-$($item.name)") }
+        if (-not $SkipUITests) {
+            foreach ($item in $selected) {
+                $exe = Join-Path $dist "RustSearch-$($item.name)/$($item.executable)"
+                switch ($item.name) {
+                    WinUI {
+                        & (Join-Path $PSScriptRoot scripts/test-winui.ps1) -Executable $exe
+                        & (Join-Path $PSScriptRoot scripts/test-winui-features.ps1) -Executable $exe
+                        & (Join-Path $PSScriptRoot scripts/test-winui-visual.ps1) -Executable $exe
+                    }
+                    WPF { & (Join-Path $PSScriptRoot scripts/test-ui.ps1) -Executable $exe -Packaged }
+                    Tauri { $env:RUSTSEARCH_TEST_TAURI=$exe; & node (Join-Path $PSScriptRoot RustSearch.Tauri/tests/desktop.mjs); Assert-Exit 'Tauri desktop tests' }
+                }
+            }
+        }
+    }
+    foreach ($item in $selected) {
+        $output = Join-Path $dist "RustSearch-$($item.name)"
+        $base = "RustSearch-$Version-$($item.name)-win-x64"
+        Compress-Archive -Path "$output/*" -DestinationPath (Join-Path $dist "$base.zip") -Force
+        if (-not $SkipInstaller) {
+            & $innoCompiler '/Qp' "/DAppVersion=$Version" "/DFrontendName=$($item.name)" "/DFrontendAppId=$($item.app_id)" "/DInstallDirectoryName=$($item.install_directory)" "/DAppExeName=$($item.executable)" "/DPublishDir=$output" "/DInstallerOutputDir=$dist" "/DInstallerBaseName=$base-setup" (Join-Path $PSScriptRoot installer/RustSearch.iss)
+            Assert-Exit "$($item.name) installer"
+            if ($TestInstaller -and -not $SkipTests -and -not $SkipUITests) { & (Join-Path $PSScriptRoot scripts/test-installer.ps1) -Installer (Join-Path $dist "$base-setup.exe") -Published $output -Frontend $item.name }
+        }
+        Write-Output "Package ready: $base"
+    }
+    & (Join-Path $PSScriptRoot scripts/test-release-packages.ps1) -Frontend $Frontend -SkipInstaller:$SkipInstaller
+    if ($selected.Count -eq 3) {
+        $files = foreach ($item in $selected) {
+            $base = "RustSearch-$Version-$($item.name)-win-x64"
+            $names = @("$base.zip")
+            if (-not $SkipInstaller) { $names += "$base-setup.exe" }
+            foreach ($name in $names) { @{ file=$name; sha256=(Get-FileHash (Join-Path $dist $name)).Hash } }
+        }
+        @{ version=$Version; frontends=$Frontend; artifacts=@($files) } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $dist "RustSearch-$Version-release-set.json") -Encoding utf8
+    }
 } finally {
-    $env:RUSTSEARCH_VERSION = $oldVersion
-    $env:RUSTSEARCH_OCR_RUNTIME_DIR = $oldOcrRuntime
-    $env:CARGO_HOME = $oldCargoHome
-    $env:NUGET_PACKAGES = $oldNuGetPackages
-    $env:NUGET_HTTP_CACHE_PATH = $oldNuGetHttpCache
-    $env:NUGET_SCRATCH = $oldNuGetScratch
+    foreach ($key in $savedEnvironment.Keys) { [Environment]::SetEnvironmentVariable($key,$savedEnvironment[$key]) }
 }

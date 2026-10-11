@@ -33,13 +33,18 @@ fn main() -> anyhow::Result<()> {
     if let Some(mode) = std::env::args().nth(1) {
         if mode == "--serve" || mode == "--connect" {
             let runtime = tokio::runtime::Runtime::new()?;
-            return runtime.block_on(async {
+            let result = runtime.block_on(async {
                 if mode == "--serve" {
                     shared::serve().await
                 } else {
                     shared::bridge().await
                 }
             });
+            // A disconnected stdio bridge can still have Tokio's blocking stdin
+            // reader waiting on its frontend. Do not let that reader prevent
+            // process exit and the frontend's normal reconnection logic.
+            runtime.shutdown_background();
+            return result;
         }
     }
     if std::env::args_os()

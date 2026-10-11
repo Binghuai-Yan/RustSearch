@@ -134,22 +134,46 @@ fn create_pipe(
 
 pub async fn connect(readonly: bool) -> Result<NamedPipeClient> {
     let name = pipe_name()?;
-    let mut spawned = false;
-    for _ in 0..200 {
+    let mut spawned: Option<tokio::process::Child> = None;
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(20);
+    while tokio::time::Instant::now() < deadline {
         match ClientOptions::new().open(&name) {
             Ok(mut pipe) => {
-                pipe.write_all(
-                    format!(
-                        "{}\n",
-                        json!({"role":if readonly {"mcp"} else {"desktop"},"protocol":1})
+                // A listening pipe can belong to a broker that is draining its
+                // previous engine. Confirm readiness using the existing RPC
+                // protocol before starting any frontend's stdio reader.
+                let ready = async {
+                    pipe.write_all(
+                        format!(
+                            "{}\n{}\n",
+                            json!({"role":if readonly {"mcp"} else {"desktop"},"protocol":1}),
+                            json!({"id":0,"method":"app.stats","params":{}})
+                        )
+                        .as_bytes(),
                     )
-                    .as_bytes(),
-                )
-                .await?;
-                return Ok(pipe);
+                    .await?;
+                    let mut lines = BufReader::new(&mut pipe).lines();
+                    while let Some(line) = lines.next_line().await? {
+                        let value: Value = serde_json::from_str(&line)?;
+                        if value["id"] == 0 {
+                            anyhow::ensure!(value["ok"] == true, "Shared engine is not ready");
+                            return Ok::<(), anyhow::Error>(());
+                        }
+                    }
+                    bail!("Shared broker disconnected during startup")
+                };
+                if matches!(
+                    tokio::time::timeout(Duration::from_secs(3), ready).await,
+                    Ok(Ok(()))
+                ) {
+                    return Ok(pipe);
+                }
             }
             Err(error) if matches!(error.raw_os_error(), Some(2 | 231)) => {
-                if !spawned {
+                if spawned
+                    .as_mut()
+                    .is_none_or(|child| child.try_wait().is_ok_and(|status| status.is_some()))
+                {
                     let logs = data_dir()?.join("logs");
                     std::fs::create_dir_all(&logs)?;
                     let log = logs.join("shared-engine.log");
@@ -169,13 +193,12 @@ pub async fn connect(readonly: bool) -> Result<NamedPipeClient> {
                                 .open(log)?,
                         )
                         .creation_flags(0x08000000);
-                    command.spawn()?;
-                    spawned = true;
+                    spawned = Some(command.spawn()?);
                 }
-                tokio::time::sleep(Duration::from_millis(50)).await;
             }
             Err(error) => return Err(error.into()),
         }
+        tokio::time::sleep(Duration::from_millis(50)).await;
     }
     bail!("Shared engine did not start; another legacy backend may hold the index")
 }
@@ -335,9 +358,18 @@ pub async fn serve() -> Result<()> {
             }
         }
     }
-    accept.abort();
     drop(input);
-    let _ = tokio::time::timeout(Duration::from_secs(15), engine.wait()).await;
+    if tokio::time::timeout(Duration::from_secs(15), engine.wait())
+        .await
+        .is_err()
+    {
+        let _ = engine.kill().await;
+        let _ = engine.wait().await;
+    }
+    // Keep the pipe instance reserved until the index writer has released its
+    // locks. New clients' readiness probes will retry while we drain.
+    accept.abort();
+    let _ = accept.await;
     Ok(())
 }
 

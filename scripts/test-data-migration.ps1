@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Backend = "$PSScriptRoot\..\dist\RustSearch\Backend\rustsearch-backend.exe",
+    [string]$Backend = "$PSScriptRoot\..\dist\RustSearch-WinUI\Backend\rustsearch-backend.exe",
     [string]$OutputDirectory = "$PSScriptRoot\..\artifacts\data-migration-tests",
     [switch]$SkipBackend
 )

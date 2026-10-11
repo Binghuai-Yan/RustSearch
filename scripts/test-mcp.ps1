@@ -1,4 +1,4 @@
-param([string]$Package = (Join-Path $PSScriptRoot '..\dist\RustSearch'))
+param([string]$Package = (Join-Path $PSScriptRoot '..\dist\RustSearch-WinUI'))
 $ErrorActionPreference = 'Stop'
 $oldBackend = $env:RUSTSEARCH_TEST_BACKEND
 $oldMcp = $env:RUSTSEARCH_TEST_MCP

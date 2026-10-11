@@ -3,20 +3,27 @@
 [![Windows build](https://github.com/Binghuai-Yan/RustSearch/actions/workflows/windows-release.yml/badge.svg)](https://github.com/Binghuai-Yan/RustSearch/actions/workflows/windows-release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-RustSearch 是完全本地运行的 Windows 全文搜索工具。WinUI 3 前端负责搜索、预览和设置；Rust sidecar 使用 Tantivy 建立索引，通过 stdin/stdout JSON Lines 与前端通信。文档和索引不会上传到服务器，程序运行时不需要联网。
+RustSearch 是完全本地运行的 Windows 全文搜索工具。提供 WinUI 3、WPF、Tauri 2 三套功能同步的前端，负责搜索、预览和设置；Rust sidecar 使用 Tantivy 建立索引，通过 stdin/stdout JSON Lines 与前端通信。文档和索引不会上传到服务器，程序运行时不需要联网。
 
 ## 下载
 
 从 [Releases](https://github.com/Binghuai-Yan/RustSearch/releases/latest) 下载 Windows x64 版本：
 
-- `RustSearch-<版本>-win-x64-setup.exe`：安装版，提供开始菜单、可选桌面快捷方式和卸载入口。
-- `RustSearch-<版本>-win-x64.zip`：便携版，解压后运行 `RustSearch.WinUI.exe`。请保留完整目录，不能只复制 EXE。
+三个版本均提供 `RustSearch-<版本>-<前端>-win-x64-setup.exe` 安装版和同名 `.zip` 便携版。解压时保留完整目录：
 
-微信输入法在当前 WinUI 3 文本框中可能只显示拼音预编辑文字而不弹出候选窗。这是 WinUI 对旧式第三方输入法辅助界面的兼容问题；普通 WinUI 文本框也受影响。安装版可从开始菜单打开 **RustSearch 输入法兼容界面**，便携版运行 `Compat\RustSearch.UI.exe`。兼容界面使用 WPF，微信输入法候选窗可正常显示，两套界面通过共享后端访问同一索引。
+| 前端 | 便携版启动程序 |
+| --- | --- |
+| WinUI | `RustSearch.WinUI.exe` |
+| WPF | `RustSearch.UI.exe` |
+| Tauri | `rustsearch-tauri.exe` |
+
+安装版提供独立开始菜单、可选桌面快捷方式和卸载入口。
+
+微信输入法在当前 WinUI 3 文本框中可能只显示拼音预编辑文字而不弹出候选窗。这是 WinUI 对旧式第三方输入法辅助界面的兼容问题；普通 WinUI 文本框也受影响。可单独下载 **WPF 版**，运行 `RustSearch.UI.exe`。WPF、WinUI 与 Tauri 三个版本分别打包，使用同一搜索引擎、索引和设置。
 
 微信输入法候选窗的[实测截图](https://github.com/Binghuai-Yan/RustSearch/blob/main/docs/screenshots/wechat-ime-compat.png)可单独查看。
 
-Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。发布包包含 .NET 和 Windows App SDK 运行时。
+Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。WinUI/WPF 发布包包含对应 .NET/Windows App SDK 运行时；Tauri 使用系统 WebView2，其数据迁移组件自带 .NET 运行时。
 
 ## 首次使用
 
@@ -80,6 +87,18 @@ Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。发
 
 测试或独立部署可以设置 `RUSTSEARCH_DATA_DIR` 覆盖数据目录，使用 `RUSTSEARCH_PREFERENCES_DIR` 隔离保存目录选择的偏好。不要把个人索引数据加入源码仓库。
 
+## Tauri 2 前端
+
+`RustSearch.Tauri/` 提供独立的 Tauri 2 + Vue 3 桌面界面，支持搜索、预览、索引文件夹管理、OCR 设置和浅色/深色主题，并复用现有共享 Rust 后端。
+
+```powershell
+cd RustSearch.Tauri
+npm ci
+npm run desktop
+```
+
+需要 Node.js 22.12+、Rust MSVC 工具链、.NET 8 SDK 和 WebView2。[Tauri 前端说明](RustSearch.Tauri/README.md)包含开发和测试方法。正式发行统一运行根目录 `build.ps1`，同时生成三个版本。
+
 ## 从源码构建
 
 需要 Windows x64、PowerShell 7、Rust stable MSVC、Visual Studio C++ Build Tools 与 Windows SDK、.NET SDK 8 或更新版本，以及 Inno Setup 6。首次构建需要联网下载依赖。WinUI 自动化测试需要可交互的 Windows 桌面。
@@ -88,7 +107,15 @@ Windows 10 1809 及以上版本、Windows 11 的 x64 桌面是目标平台。发
 ./build.ps1
 ```
 
-脚本准备固定版本的 Tesseract、PDFium 和中英模型并校验 SHA-256，运行 Rust 测试，发布自包含 WinUI 主程序和 WPF 输入法兼容界面，执行桌面回归测试，并生成 `dist/` 下的便携 ZIP 和安装 EXE。准备 OCR 运行时需要联网及 7-Zip，发布包使用时不需要联网。非交互环境使用 `./build.ps1 -SkipUITests`，仍运行 Rust 测试；只生成 ZIP 可加 `-SkipInstaller`。完整安装、启动、卸载验收可用 `./build.ps1 -TestInstaller`。
+脚本准备固定版本的 Tesseract、PDFium 和中英模型并校验 SHA-256，运行共享后端和迁移测试，分别发布 WinUI、WPF、Tauri 自包含程序，执行三套桌面回归测试，并生成 `dist/` 下的三份便携 ZIP 和三份安装 EXE。三个包均包含相同的后端、MCP 和 OCR 运行时。准备 OCR 运行时需要联网及 7-Zip，发布包使用时不需要联网。非交互环境使用 `./build.ps1 -SkipUITests`，仍运行 Rust 测试；只生成 ZIP 可加 `-SkipInstaller`。完整安装、启动、卸载验收可用 `./build.ps1 -TestInstaller`。
+
+- `RustSearch-<版本>-WinUI-win-x64.zip` / `-setup.exe`
+- `RustSearch-<版本>-WPF-win-x64.zip` / `-setup.exe`
+- `RustSearch-<版本>-Tauri-win-x64.zip` / `-setup.exe`
+
+三个安装器使用独立应用 ID、快捷方式与安装目录，可同时安装。WinUI 保留原应用 ID 与默认安装路径以兼容升级；WPF 不再嵌套在 `Compat/` 内。Tauri 运行需要系统安装 WebView2 Runtime，Windows 10/11 通常已自带。
+
+版本只在根目录 `VERSION` 维护：执行 `./scripts/sync-version.ps1 -Version 0.1.9` 可同步 Cargo、Tauri 和 npm 清单，.NET 自动读取 `VERSION`。构建与 CI 会拒绝版本不一致。开发时可用 `-Frontend WinUI`、`-Frontend WPF` 或 `-Frontend Tauri` 仅构建一套；正式标签发布必须通过三套完整检查，将六个文件上传到草稿 Release 后再统一公开。详见[功能同步约定](docs/frontend-parity.md)。
 
 依赖缓存默认位于可用的 `E:\cache\RustSearch-Dependencies`，否则位于用户本地应用数据目录；也可用 `RUSTSEARCH_DEPENDENCY_CACHE_DIR` 指定。它与应用索引数据分离。单独执行 Cargo 或 dotnet 命令前，可运行 `. ./scripts/use-dependency-cache.ps1` 采用相同缓存路径。
 

@@ -1,6 +1,6 @@
 #requires -Version 7.0
 param(
-    [string]$Executable = (Join-Path $PSScriptRoot '..\dist\RustSearch\RustSearch.WinUI.exe'),
+    [string]$Executable = (Join-Path $PSScriptRoot '..\dist\RustSearch-WinUI\RustSearch.WinUI.exe'),
     [string]$OutputDirectory = (Join-Path $PSScriptRoot '..\artifacts\winui-smoke')
 )
 $ErrorActionPreference = 'Stop'

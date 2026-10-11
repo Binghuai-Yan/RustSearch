@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../RustSearch.UI/Services/AppPaths.cs" Link="AppPaths.cs" />
+    <Compile Include="../RustSearch.UI/Services/BackendProcess.cs" Link="BackendProcess.cs" />
+    <Compile Include="../RustSearch.UI/Services/JsonRpcClient.cs" Link="JsonRpcClient.cs" />
+    <Compile Include="../RustSearch.UI/Services/BackendModels.cs" Link="BackendModels.cs" />
+    <Compile Include="../RustSearch.UI/Services/DataDirectoryMigration.cs" Link="DataDirectoryMigration.cs" />
+    <Compile Include="../RustSearch.UI/Services/DataMigrationLease.cs" Link="DataMigrationLease.cs" />
+  </ItemGroup>
+</Project>

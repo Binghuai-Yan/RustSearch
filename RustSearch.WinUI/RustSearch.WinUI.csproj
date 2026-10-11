@@ -17,6 +17,8 @@
     <ImplicitUsings>disable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="../frontends.json" LogicalName="RustSearch.Frontends" />
+    <Compile Include="../RustSearch.UI/Services/SearchOptions.cs" Link="Services/SearchOptions.cs" />
     <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
     <Content Include="Assets\IconPark\**\*.svg" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="Assets\IconPark\LICENSE;Assets\IconPark\README.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

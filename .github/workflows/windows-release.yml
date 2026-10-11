@@ -17,6 +17,8 @@ concurrency:
 jobs:
   windows:
     runs-on: windows-latest
+    env:
+      RUSTSEARCH_DEPENDENCY_CACHE_DIR: ${{ runner.temp }}\RustSearch-Dependencies
     defaults:
       run:
         shell: pwsh
@@ -32,6 +34,12 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: RustSearch.Tauri/package-lock.json
+
       - uses: actions/cache@v6.1.0
         with:
           path: |
@@ -39,13 +47,14 @@ jobs:
             ${{ runner.temp }}\RustSearch-Dependencies\cargo\git
             ${{ runner.temp }}\RustSearch-Dependencies\nuget\packages
             ${{ runner.temp }}\RustSearch-Dependencies\ocr
-          key: windows-deps-${{ hashFiles('rustsearch-backend/Cargo.lock', '**/*.csproj') }}
+          key: windows-deps-${{ hashFiles('rustsearch-backend/Cargo.lock', 'RustSearch.Tauri/src-tauri/Cargo.lock', '**/*.csproj') }}
           restore-keys: |
             windows-deps-
 
       - name: Check README images and release notes
         run: |
           ./scripts/check-readme-assets.ps1
+          ./scripts/sync-version.ps1 -Check
           if ($env:GITHUB_REF_TYPE -eq 'tag') {
             $notes = Join-Path 'docs/releases' "$env:GITHUB_REF_NAME.md"
             if (-not (Test-Path -LiteralPath $notes -PathType Leaf)) {
@@ -74,14 +83,6 @@ jobs:
           $env:RUSTSEARCH_OCR_RUNTIME_DIR = ./scripts/prepare-ocr-runtime.ps1
           cargo test --manifest-path rustsearch-backend/Cargo.toml --locked
 
-      - name: Build frontends for pull requests
-        if: github.event_name == 'pull_request'
-        run: |
-          dotnet build RustSearch.WinUI/RustSearch.WinUI.csproj -c Release -p:Platform=x64
-          if ($LASTEXITCODE -ne 0) { throw 'WinUI build failed' }
-          dotnet build RustSearch.UI/RustSearch.UI.csproj -c Release
-          if ($LASTEXITCODE -ne 0) { throw 'WPF build failed' }
-
       - name: Install Inno Setup
         if: github.event_name != 'pull_request'
         run: |
@@ -91,8 +92,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation failed' }
           }
 
-      - name: Build portable ZIP and installer
-        if: github.event_name != 'pull_request'
+      - name: Build all three independent packages
         env:
           RUSTSEARCH_DEPENDENCY_CACHE_DIR: ${{ runner.temp }}\RustSearch-Dependencies
         run: |
@@ -101,13 +101,34 @@ jobs:
             $tagVersion = $env:GITHUB_REF_NAME -replace '^v', ''
             if ($tagVersion -ne $version) { throw "Tag version $tagVersion does not match VERSION $version" }
           }
-          ./build.ps1 -Version $version -SkipTests -SkipUITests
+          ./build.ps1 -Version $version -SkipTests -SkipUITests -SkipInstaller:($env:GITHUB_EVENT_NAME -eq 'pull_request')
 
-      - name: Verify packaged MCP server
-        if: github.event_name != 'pull_request'
-        env:
-          RUSTSEARCH_DEPENDENCY_CACHE_DIR: ${{ runner.temp }}\RustSearch-Dependencies
-        run: ./scripts/test-mcp.ps1 -Package ./dist/RustSearch
+      - name: Check Tauri and shared migration code
+        run: |
+          . ./scripts/use-dependency-cache.ps1
+          cargo fmt --manifest-path RustSearch.Tauri/src-tauri/Cargo.toml --all -- --check
+          if ($LASTEXITCODE -ne 0) { throw 'Tauri formatting failed' }
+          cargo clippy --manifest-path RustSearch.Tauri/src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+          if ($LASTEXITCODE -ne 0) { throw 'Tauri lints failed' }
+          npm --prefix RustSearch.Tauri test
+          if ($LASTEXITCODE -ne 0) { throw 'Frontend tests failed' }
+          ./scripts/test-data-migration.ps1 -Backend ./dist/RustSearch-WinUI/Backend/rustsearch-backend.exe
+
+      - name: Verify parity and packaged MCP servers
+        run: |
+          ./scripts/test-release-packages.ps1 -SkipInstaller:($env:GITHUB_EVENT_NAME -eq 'pull_request')
+          foreach ($frontend in @('WinUI','WPF','Tauri')) {
+            ./scripts/test-mcp.ps1 -Package "./dist/RustSearch-$frontend"
+          }
+
+      - name: Verify three desktop frontends
+        run: |
+          ./scripts/test-winui.ps1 -Executable ./dist/RustSearch-WinUI/RustSearch.WinUI.exe
+          ./scripts/test-winui-features.ps1 -Executable ./dist/RustSearch-WinUI/RustSearch.WinUI.exe -SkipPointerInput
+          ./scripts/test-ui.ps1 -Executable ./dist/RustSearch-WPF/RustSearch.UI.exe -Packaged
+          $env:RUSTSEARCH_TEST_TAURI = (Resolve-Path ./dist/RustSearch-Tauri/rustsearch-tauri.exe).Path
+          node RustSearch.Tauri/tests/desktop.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Tauri desktop tests failed' }
 
       - name: Verify third-party notices
         env:
@@ -126,6 +147,7 @@ jobs:
           path: |
             dist/RustSearch-*-win-x64.zip
             dist/RustSearch-*-win-x64-setup.exe
+            dist/RustSearch-*-release-set.json
           if-no-files-found: error
 
   release:
@@ -142,12 +164,50 @@ jobs:
           name: RustSearch-win-x64
           path: dist
 
-      - name: Publish tagged release
+      - name: Verify complete release set
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          version = Path('VERSION').read_text().strip()
+          assert os.environ['RELEASE_TAG'] == 'v' + version
+          manifest = json.loads(Path(f'dist/RustSearch-{version}-release-set.json').read_text(encoding='utf-8-sig'))
+          assert manifest['version'] == version
+          expected = {f'RustSearch-{version}-{f}-win-x64{s}' for f in ['WinUI', 'WPF', 'Tauri'] for s in ['.zip', '-setup.exe']}
+          assert {a['file'] for a in manifest['artifacts']} == expected
+          assert len(manifest['artifacts']) == 6
+          for artifact in manifest['artifacts']:
+              assert hashlib.sha256(Path('dist', artifact['file']).read_bytes()).hexdigest().upper() == artifact['sha256']
+          PY
+
+      - name: Refuse to rewrite a published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$RELEASE_TAG" --json isDraft > release-state.json 2>/dev/null; then
+            python -c "import json; assert json.load(open('release-state.json'))['isDraft'], 'This version is already public; create a new version tag.'"
+          fi
+
+      - name: Upload all packages to a draft release
         uses: softprops/action-gh-release@v3.0.3
         with:
           files: |
             dist/RustSearch-*-win-x64.zip
             dist/RustSearch-*-win-x64-setup.exe
+            dist/RustSearch-*-release-set.json
+          draft: true
           fail_on_unmatched_files: true
           body_path: docs/releases/${{ github.ref_name }}.md
           generate_release_notes: false
+
+      - name: Publish complete release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          count=$(gh release view "$RELEASE_TAG" --json assets --jq '.assets | length')
+          test "$count" -eq 7
+          gh release edit "$RELEASE_TAG" --draft=false

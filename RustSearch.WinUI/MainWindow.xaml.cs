@@ -38,7 +38,7 @@ public sealed partial class MainWindow : Window
     private bool _indexingActive;
     private bool _isComposingQuery;
     private DateTime _lastIndexRefreshUtc = DateTime.MinValue;
-    private const int PageSize = 50;
+    private static readonly int PageSize = SearchOptions.PageSize;
 
     public MainWindow()
     {
@@ -61,15 +61,7 @@ public sealed partial class MainWindow : Window
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "RustSearch.ico"));
         AppWindow.Changed += (_, args) => { if (args.DidSizeChange) EnsureMinimumSize(); };
         _rpc = new JsonRpcClient(_backend);
-        TypeFilter.ItemsSource = new FilterOption[]
-        {
-            new("全部类型", []), new("PDF", ["pdf"]),
-            new("Office", ["docx", "xlsx", "xls", "xlsb", "pptx"]),
-            new("文本", ["txt", "md", "log", "csv", "json", "xml", "yaml", "yml", "ini"]),
-            new("代码", ["rs", "py", "js", "ts", "tsx", "jsx", "cs", "c", "cpp", "h", "java", "go", "sql", "html", "css"]),
-            new("EPUB", ["epub"]),
-            new("图片", ["png", "jpg", "jpeg", "bmp", "tif", "tiff"])
-        };
+        TypeFilter.ItemsSource = SearchOptions.Filters;
         SortFilter.ItemsSource = new SortOption[]
         {
             new("相关度", "relevance"), new("修改时间降序", "mtime_desc"),

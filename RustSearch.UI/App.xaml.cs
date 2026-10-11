@@ -118,6 +118,7 @@ public partial class App : Application
         if (_tray is not null) _tray.Visible = false;
         try
         {
+            if (_settings is not null) await _settings.PrepareForShutdownAsync();
             if (_services is not null)
             {
                 _services.GetRequiredService<MainViewModel>().Dispose();

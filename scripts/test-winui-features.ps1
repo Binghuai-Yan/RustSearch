@@ -1,8 +1,9 @@
 #requires -Version 7.0
 param(
-    [string]$Executable = (Join-Path $PSScriptRoot '..\dist\RustSearch\RustSearch.WinUI.exe'),
+    [string]$Executable = (Join-Path $PSScriptRoot '..\dist\RustSearch-WinUI\RustSearch.WinUI.exe'),
     [string]$OutputDirectory = (Join-Path $PSScriptRoot '..\artifacts\winui-features'),
-    [switch]$HelpersOnly
+    [switch]$HelpersOnly,
+    [switch]$SkipPointerInput
 )
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
@@ -367,14 +368,18 @@ try {
     Search '合同' 130
     Select-FirstResult
     (Get-ResultItems)[1].GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    Set-Clipboard -Value 'RustSearch clipboard pending'
     Invoke-Control 'CopyPathButton'
+    Wait-Until { (Get-Clipboard -Raw) -ne 'RustSearch clipboard pending' } 'selected path copied'
     $selectedPath = Get-Clipboard -Raw
     $backgroundFile = Join-Path $fixtureDirectory 'background-update.txt'
     [System.IO.File]::WriteAllText($backgroundFile, "合同`n后台更新测试", $utf8)
     Wait-Until { (Read-Control 'IndexStatistics') -match '(?<!\d)131 个文档' } 'background index statistics after create'
     Start-Sleep -Milliseconds 1400
     Wait-SearchCount 130
+    Set-Clipboard -Value 'RustSearch clipboard pending'
     Invoke-Control 'CopyPathButton'
+    Wait-Until { (Get-Clipboard -Raw) -ne 'RustSearch clipboard pending' } 'path copied after background update'
     if ((Get-Clipboard -Raw) -ne $selectedPath) { throw 'Background indexing changed the selected search result.' }
     Invoke-Control 'RefreshButton'
     Wait-SearchCount 131
@@ -457,10 +462,13 @@ try {
     [WinUiFeaturesNative]::Key(0x27)
     [WinUiFeaturesNative]::Key(0x27)
     Wait-Until { (Get-Control 'SearchResults').Current.BoundingRectangle.Width -gt $listWidth+10 } 'keyboard pane resizing'
-    $dragStartWidth = (Get-Control 'SearchResults').Current.BoundingRectangle.Width
-    $rect = $splitter.Current.BoundingRectangle
-    [WinUiFeaturesNative]::Drag([int]($rect.Left+$rect.Width/2), [int]($rect.Top+$rect.Height/2), -60)
-    Wait-Until { (Get-Control 'SearchResults').Current.BoundingRectangle.Width -lt $dragStartWidth-20 } 'mouse pane resizing'
+    if ($SkipPointerInput) { Write-Output 'SKIP: physical mouse drag; keyboard pane resizing remains verified.' }
+    else {
+        $dragStartWidth = (Get-Control 'SearchResults').Current.BoundingRectangle.Width
+        $rect = $splitter.Current.BoundingRectangle
+        [WinUiFeaturesNative]::Drag([int]($rect.Left+$rect.Width/2), [int]($rect.Top+$rect.Height/2), -60)
+        Wait-Until { (Get-Control 'SearchResults').Current.BoundingRectangle.Width -lt $dragStartWidth-20 } 'mouse pane resizing'
+    }
     $beforeTheme = Save-Window $script:window '03-search-theme-a.png'
     Invoke-Control 'ThemeButton'
     Start-Sleep -Milliseconds 300
@@ -475,7 +483,7 @@ try {
     foreach ($id in @('SearchQuery','SearchButton','SettingsButton','TypeFilter','SortFilter','CopyPathButton')) { Assert-ControlFits $id $script:window }
     $null = Save-Window $script:window '05-main-compact.png'
     $transform.Resize($originalRect.Width,$originalRect.Height)
-    Write-Output 'PASS: keyboard/mouse pane resizing, rendered light/dark themes and compact main layout.'
+    Write-Output 'PASS: pane resizing, rendered light/dark themes and compact main layout (see pointer skip status above).'
 
     Open-Settings
     Set-MaximumSize 64
@@ -565,12 +573,14 @@ try {
         Assert-ControlFits $id $script:settings
     }
     Invoke-Control 'SettingsCopyClaudeMcp' $script:settings
+    Wait-Until { (Get-Clipboard -Raw) -match '"mcpServers"' } 'Claude MCP config copied'
     $mcpConfig = Get-Clipboard -Raw | ConvertFrom-Json
     $mcpPath = $mcpConfig.mcpServers.rustsearch.command
     if (!(Test-Path -LiteralPath $mcpPath -PathType Leaf) -or [IO.Path]::GetFileName($mcpPath) -ne 'rustsearch-mcp.exe') {
         throw 'Claude MCP configuration does not reference the packaged executable.'
     }
     Invoke-Control 'SettingsCopyCodexMcp' $script:settings
+    Wait-Until { (Get-Clipboard -Raw) -match '\[mcp_servers\.rustsearch\]' } 'Codex MCP config copied'
     $codexConfig = Get-Clipboard -Raw
     if ($codexConfig -notmatch '\[mcp_servers\.rustsearch\]' -or $codexConfig -notmatch 'rustsearch-mcp\.exe') {
         throw 'Codex MCP configuration is incomplete.'

@@ -22,6 +22,8 @@ public static class RustSearchSmokeNative {
     [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr window, IntPtr dc, uint flags);
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr window);
     [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr window, int command);
+    [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+    [DllImport("user32.dll")] public static extern IntPtr GetDlgItem(IntPtr dialog, int identifier);
 }
 '@
 
@@ -40,7 +42,21 @@ function Find-Control($Scope, [string]$Name, [switch]$ById) {
 }
 function Invoke-Control($Control) {
     if ($null -eq $Control) { throw 'Expected control was not found.' }
-    $Control.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+    $requested = $Control.Current
+    # Icon + text buttons may expose the text as a separate automation child.
+    for ($parent = 0; $parent -lt 4 -and $null -ne $Control; $parent++) {
+        $invoke = $null
+        if ($Control.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$invoke)) {
+            $invoke.Invoke()
+            return
+        }
+        if ($Control.Current.ControlType -eq [System.Windows.Automation.ControlType]::Button -and $Control.Current.NativeWindowHandle -ne 0) {
+            [RustSearchSmokeNative]::SendMessage([IntPtr]$Control.Current.NativeWindowHandle, 0xF5, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+            return
+        }
+        $Control = [System.Windows.Automation.TreeWalker]::ControlViewWalker.GetParent($Control)
+    }
+    throw "No invokable button found: $($requested.Name), $($requested.AutomationId), $($requested.ControlType.ProgrammaticName)."
 }
 function Save-Window([IntPtr]$Handle, [string]$Filename) {
     $rectangle = [RustSearchSmokeNative+Rect]::new()
@@ -82,6 +98,8 @@ New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 $testDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ('RustSearch-ui-' + [guid]::NewGuid().ToString('N'))
 $fixtureDirectory = Join-Path $testDirectory 'documents'
 New-Item -ItemType Directory -Path $fixtureDirectory -Force | Out-Null
+$previousPreferences = $env:RUSTSEARCH_PREFERENCES_DIR
+$env:RUSTSEARCH_PREFERENCES_DIR = Join-Path $testDirectory preferences
 $previousDataDirectory = $env:RUSTSEARCH_DATA_DIR
 $previousBackendPath = $env:RUSTSEARCH_BACKEND_PATH
 $env:RUSTSEARCH_DATA_DIR = Join-Path $testDirectory 'data'
@@ -200,6 +218,31 @@ try {
     Save-Window ([IntPtr]$settings.Current.NativeWindowHandle) 'ui-settings-files.png'
     (Find-Control $settings '关于').GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Wait-Until { $null -ne (Find-Control $settings $env:RUSTSEARCH_DATA_DIR) } 'about data directory'
+    if ($Packaged) {
+        Set-Clipboard -Value 'RustSearch clipboard pending'
+        Invoke-Control (Find-Control $settings '复制 Claude Desktop 配置')
+        Wait-Until { (Get-Clipboard -Raw) -ne 'RustSearch clipboard pending' } 'WPF MCP config copied'
+        $mcp = (Get-Clipboard -Raw | ConvertFrom-Json).mcpServers.rustsearch.command
+        if ($mcp -ne (Join-Path (Split-Path $executablePath -Parent) 'Backend/rustsearch-mcp.exe')) { throw 'WPF MCP config path mismatch.' }
+    }
+    $migrate = Find-Control $settings '迁移现有索引和设置（目标必须为空）'
+    $migrate.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle()
+    $target = Find-Control $settings '新的数据目录'
+    $alternate = Join-Path $testDirectory alternate-data
+    foreach ($directory in @($alternate, $env:RUSTSEARCH_DATA_DIR)) {
+        $target.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($directory)
+        Invoke-Control (Find-Control $settings '更换数据目录')
+        Wait-Until { $null -ne (Find-Control $settings '迁移数据目录') } 'WPF data switch confirmation'
+        $confirmation = Find-Control $settings '迁移数据目录'
+        $yes = [RustSearchSmokeNative]::GetDlgItem([IntPtr]$confirmation.Current.NativeWindowHandle, 6)
+        if ($yes -eq [IntPtr]::Zero) { throw 'WPF confirmation has no native Yes button.' }
+        [RustSearchSmokeNative]::SendMessage($yes, 0xF5, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+        Wait-Until { $null -ne (Find-Control $settings $directory) } 'WPF switched data directory' 45
+        Wait-Until { (Find-Control $settings '更换数据目录').Current.IsEnabled } 'WPF data switch complete'
+    }
+    if (-not (Test-Path (Join-Path $env:RUSTSEARCH_DATA_DIR meta.db))) { throw 'WPF switch-only removed source data.' }
+    $migrate.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle()
+    Write-Output 'PASS: WPF packaged MCP configuration and existing data directory round trip.'
     Save-Window ([IntPtr]$settings.Current.NativeWindowHandle) 'ui-settings-about.png'
     $settings.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
     $settings = $null
@@ -260,6 +303,7 @@ try {
         if (!$process.HasExited) { $process.Kill($true) }
         $process.Dispose()
     }
+    $env:RUSTSEARCH_PREFERENCES_DIR = $previousPreferences
     $env:RUSTSEARCH_DATA_DIR = $previousDataDirectory
     $env:RUSTSEARCH_BACKEND_PATH = $previousBackendPath
 }

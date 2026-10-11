@@ -8,6 +8,7 @@ public static class UserPreferences
     private static readonly object Gate = new();
     private static bool _loaded;
     private static string? _loadedDirectory;
+    private static DateTime _loadedWriteTime;
     private static bool _closeToTray = true;
 
     public static bool CloseToTray
@@ -33,9 +34,10 @@ public static class UserPreferences
             {
                 Directory.CreateDirectory(AppPaths.DataDirectory);
                 var path = Path.Combine(AppPaths.DataDirectory, "ui-preferences.json");
-                var temp = path + ".tmp";
+                var temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
                 File.WriteAllText(temp, JsonSerializer.Serialize(new Preferences(_closeToTray), new JsonSerializerOptions { WriteIndented = true }));
                 File.Move(temp, path, true);
+                _loadedWriteTime = File.GetLastWriteTimeUtc(path);
             }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
@@ -47,13 +49,18 @@ public static class UserPreferences
         lock (Gate)
         {
             var directory = AppPaths.DataDirectory;
-            if (_loaded && string.Equals(_loadedDirectory, directory, StringComparison.OrdinalIgnoreCase)) return;
+            var path = Path.Combine(directory, "ui-preferences.json");
+            DateTime modified;
+            try { modified = File.GetLastWriteTimeUtc(path); }
+            catch (IOException) { return; }
+            catch (UnauthorizedAccessException) { return; }
+            if (_loaded && _loadedWriteTime == modified && string.Equals(_loadedDirectory, directory, StringComparison.OrdinalIgnoreCase)) return;
+            _loadedWriteTime = modified;
             _loaded = true;
             _loadedDirectory = directory;
             _closeToTray = true;
             try
             {
-                var path = Path.Combine(directory, "ui-preferences.json");
                 if (!File.Exists(path)) return;
                 var preferences = JsonSerializer.Deserialize<Preferences>(File.ReadAllText(path));
                 if (preferences is not null) _closeToTray = preferences.CloseToTray;
