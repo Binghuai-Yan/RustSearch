@@ -17,13 +17,14 @@ concurrency:
 jobs:
   windows:
     runs-on: windows-latest
-    env:
-      RUSTSEARCH_DEPENDENCY_CACHE_DIR: ${{ runner.temp }}\RustSearch-Dependencies
     defaults:
       run:
         shell: pwsh
     steps:
       - uses: actions/checkout@v7.0.1
+
+      - name: Configure dependency cache
+        run: '"RUSTSEARCH_DEPENDENCY_CACHE_DIR=$env:RUNNER_TEMP\RustSearch-Dependencies" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append'
 
       - uses: dtolnay/rust-toolchain@stable
         with:
