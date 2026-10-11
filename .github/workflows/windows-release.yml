@@ -272,7 +272,10 @@ jobs:
         run: |
           $env:RUSTSEARCH_TEST_TAURI = (Resolve-Path ./dist/RustSearch-Tauri/rustsearch-tauri.exe).Path
           node RustSearch.Tauri/tests/desktop.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Tauri desktop tests failed' }
+          if ($LASTEXITCODE -ne 0) {
+            ./RustSearch.Tauri/tests/probe-startup.ps1 -Executable $env:RUSTSEARCH_TEST_TAURI
+            throw 'Tauri desktop tests failed'
+          }
 
       - name: Verify WinUI desktop
         run: |

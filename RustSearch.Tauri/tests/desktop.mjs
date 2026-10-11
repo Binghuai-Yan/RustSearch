@@ -276,11 +276,13 @@ try {
   }, null, 2));
   console.log(`PASS: Tauri desktop checks. Screenshots: ${artifacts}`);
 } catch (error) {
+  await writeFile(join(artifacts, 'failure.json'), JSON.stringify({ error: error.stack, executable,
+    pid: app.pid, exitCode: app.exitCode, port, stderr, stdout }, null, 2));
   if (!page && app.exitCode === null) {
     try {
-      console.error(execFileSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+      console.error(execFileSync('pwsh.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File',
         join(frontend, 'tests/startup-diagnostics.ps1'), '-ApplicationPid', String(app.pid), '-DebugPort', String(port),
-        '-OutputDirectory', artifacts], { encoding: 'utf8', windowsHide: true, timeout: 20000, env: appEnv }));
+        '-OutputDirectory', artifacts], { encoding: 'utf8', windowsHide: true, timeout: 45000, env: appEnv }));
     } catch (diagnosticError) { console.error(`Startup diagnostics: ${diagnosticError.message}`); }
   }
   if (page) {
