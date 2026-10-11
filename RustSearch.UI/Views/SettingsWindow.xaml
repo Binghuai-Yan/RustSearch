@@ -89,6 +89,7 @@
                 </ScrollViewer>
             </TabItem>
             <TabItem Header="关于">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="4,26,4,16">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="/Assets/RustSearch.png" Width="46" Height="46" Margin="0,0,14,0" />
@@ -110,7 +111,14 @@
                         <ComboBox ItemsSource="{Binding ThemeOptions}" SelectedItem="{Binding SelectedTheme, UpdateSourceTrigger=PropertyChanged}" Width="110" AutomationProperties.Name="界面主题" />
                     </StackPanel>
                     <TextBlock Text="Rust · Tantivy · WPF" FontFamily="Segoe UI" FontSize="12" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,32,0,0" />
+                    <TextBlock Text="MCP 接入" FontWeight="SemiBold" Margin="0,18,0,8" />
+                    <TextBlock Text="允许 AI 客户端读取已索引正文；客户端可能将正文发送给模型服务。迁移数据前请关闭 MCP 客户端。" TextWrapping="Wrap" Foreground="{DynamicResource TextMutedBrush}" />
+                    <WrapPanel Margin="0,12,0,0">
+                      <Button Command="{Binding CopyClaudeMcpCommand}" Margin="0,0,8,8"><StackPanel Orientation="Horizontal"><controls:IconParkIcon Icon="copy" Width="14" Height="14" Margin="0,0,6,0" /><TextBlock Text="复制 Claude Desktop 配置" /></StackPanel></Button>
+                      <Button Command="{Binding CopyCodexMcpCommand}" Margin="0,0,8,8"><StackPanel Orientation="Horizontal"><controls:IconParkIcon Icon="copy" Width="14" Height="14" Margin="0,0,6,0" /><TextBlock Text="复制 Codex 配置" /></StackPanel></Button>
+                    </WrapPanel>
                 </StackPanel>
+                </ScrollViewer>
             </TabItem>
         </TabControl>
         <Border Grid.Row="2" Background="{DynamicResource PanelBrush}" Padding="24,12" MinHeight="46">

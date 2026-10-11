@@ -61,6 +61,8 @@ pub struct Event<'a> {
 #[derive(Debug, Deserialize)]
 pub struct PathParams {
     pub path: String,
+    #[serde(default)]
+    pub indexed_only: bool,
 }
 #[derive(Debug, Deserialize)]
 pub struct RebuildParams {
@@ -74,6 +76,7 @@ pub struct SearchParams {
     pub page: usize,
     pub page_size: usize,
     pub sort: String,
+    pub record_history: bool,
 }
 impl Default for SearchParams {
     fn default() -> Self {
@@ -83,6 +86,7 @@ impl Default for SearchParams {
             page: 0,
             page_size: 50,
             sort: "relevance".into(),
+            record_history: true,
         }
     }
 }

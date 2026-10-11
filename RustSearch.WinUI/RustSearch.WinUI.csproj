@@ -28,6 +28,8 @@
     <Compile Include="..\RustSearch.UI\Services\BackendModels.cs" Link="Services\BackendModels.cs" />
     <Compile Include="..\RustSearch.UI\Services\AppPaths.cs" Link="Services\AppPaths.cs" />
     <Compile Include="..\RustSearch.UI\Services\DataDirectoryMigration.cs" Link="Services\DataDirectoryMigration.cs" />
+    <Compile Include="..\RustSearch.UI\Services\DataMigrationLease.cs" Link="Services\DataMigrationLease.cs" />
+    <Compile Include="..\RustSearch.UI\Services\McpConfiguration.cs" Link="Services\McpConfiguration.cs" />
     <Compile Include="..\RustSearch.UI\Services\UserPreferences.cs" Link="Services\UserPreferences.cs" />
   </ItemGroup>
 </Project>

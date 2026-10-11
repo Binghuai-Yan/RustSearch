@@ -192,6 +192,14 @@
                 </StackPanel>
                 <Border Height="1" Background="{ThemeResource DividerBrush}" />
                 <TextBlock Text="IconPark 1.4.2 · Apache License 2.0" Style="{StaticResource CaptionTextStyle}" Foreground="{ThemeResource MutedBrush}" />
+                <Border Height="1" Background="{ThemeResource DividerBrush}" />
+                <TextBlock Text="MCP 接入" Style="{StaticResource SectionTitleStyle}" />
+                <TextBlock Text="允许 Claude Desktop、Codex 等客户端搜索已索引文件。检索在本机运行；客户端可能把返回的正文发送给其模型服务。迁移数据目录前请关闭 MCP 客户端。" TextWrapping="Wrap" Style="{StaticResource CaptionTextStyle}" />
+                <TextBlock x:Name="McpStatusText" TextWrapping="Wrap" Style="{StaticResource CaptionTextStyle}" AutomationProperties.AutomationId="SettingsMcpStatus" />
+                <StackPanel Spacing="8">
+                  <Button Click="CopyClaudeMcp_Click" AutomationProperties.AutomationId="SettingsCopyClaudeMcp"><StackPanel Orientation="Horizontal" Spacing="6"><local:IconParkIcon Kind="copy" Width="16" Height="16" /><TextBlock Text="复制 Claude Desktop 配置" /></StackPanel></Button>
+                  <Button Click="CopyCodexMcp_Click" AutomationProperties.AutomationId="SettingsCopyCodexMcp"><StackPanel Orientation="Horizontal" Spacing="6"><local:IconParkIcon Kind="copy" Width="16" Height="16" /><TextBlock Text="复制 Codex 配置" /></StackPanel></Button>
+                </StackPanel>
               </StackPanel>
             </Grid>
           </Grid>

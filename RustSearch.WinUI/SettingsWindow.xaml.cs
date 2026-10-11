@@ -46,6 +46,7 @@ public sealed partial class SettingsWindow : Window
         _refreshMain = refreshMain;
         _applyTheme = applyTheme;
         InitializeComponent();
+        McpStatusText.Text = File.Exists(McpConfiguration.Executable) ? "MCP 已安装 · " + McpConfiguration.Executable : "MCP 程序未打包，请重新构建。";
         _chrome = new FluentWindowChrome(this, Root, TitleDragRegion, CaptionInset);
         Title = "RustSearch 设置";
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "RustSearch.ico"));
@@ -260,6 +261,9 @@ public sealed partial class SettingsWindow : Window
         _paused = stats.Paused;
         StatisticsText.Text = $"{stats.Roots:N0} 个文件夹 · {stats.TotalDocs:N0} 个文档 · {stats.FailedDocs:N0} 个提取失败 · 索引 {Formatting.Bytes(stats.IndexSizeBytes)}";
         OcrStateText.Text = $"待识别 {stats.OcrPending:N0} 个 · 失败 {stats.OcrFailed:N0} 个";
+        McpStatusText.Text = File.Exists(McpConfiguration.Executable)
+            ? $"MCP 已安装 · 引擎连接 {stats.ActiveClients} 个 · PID {stats.EnginePid}\n{McpConfiguration.Executable}"
+            : "MCP 程序未打包，请重新构建。";
         VersionText.Text = $"RustSearch {stats.Version}";
         IndexStateText.Text = _paused ? "索引已暂停" : stats.Indexing ? "正在建立索引" : "索引已就绪";
         UpdateRootActions();
@@ -390,6 +394,16 @@ public sealed partial class SettingsWindow : Window
         }, "已安排失败文件重新识别。");
     }
 
+    private void CopyClaudeMcp_Click(object sender, RoutedEventArgs args) => CopyMcp(McpConfiguration.Claude);
+    private void CopyCodexMcp_Click(object sender, RoutedEventArgs args) => CopyMcp(McpConfiguration.Codex);
+    private void CopyMcp(string text)
+    {
+        var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
+        package.SetText(text);
+        Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+        StatusText.Text = "配置已复制，请合并到客户端现有 MCP 配置中。";
+    }
+
     private void Theme_SelectionChanged(object sender, SelectionChangedEventArgs args)
     {
         if (_loading || _closed || ThemeBox.SelectedIndex < 0) return;
@@ -454,6 +468,8 @@ public sealed partial class SettingsWindow : Window
             SettingsNavigation.IsEnabled = false;
             try
             {
+                using var migrationLease = new DataMigrationLease(previous);
+                await CallAsync<JsonElement>("app.prepare_migration");
                 await _backend.StopAsync();
                 cancellation.Token.ThrowIfCancellationRequested();
                 if (migrate)

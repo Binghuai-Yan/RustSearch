@@ -91,7 +91,7 @@ function Select-SettingsSectionForControl([string]$Id, $Scope) {
         '^Settings(MaxFileSize|SkipDirectories|Dictionary|OcrEnabled|OcrImages|OcrPdf|OcrMaxPages|OcrState|RetryOcr|Save)$' { 'Options'; break }
         '^Settings(Theme|CloseToTray)$' { 'Appearance'; break }
         '^Settings(CurrentDataDirectory|DataDirectory|BrowseDataDirectory|ChangeDataDirectory|OpenDataDirectory|MigrateData)$' { 'Storage'; break }
-        '^SettingsVersion$' { 'About'; break }
+        '^Settings(Version|McpStatus|CopyClaudeMcp|CopyCodexMcp)$' { 'About'; break }
     }
     if ($section) { Select-SettingsSection $section }
 }
@@ -561,9 +561,21 @@ try {
     $settingsScale = [WinUiFeaturesNative]::GetDpiForWindow([IntPtr]$script:settings.Current.NativeWindowHandle) / 96.0
     $settingsTransform.Resize(600*$settingsScale,560*$settingsScale)
     Start-Sleep -Milliseconds 400
-    foreach ($id in @('SettingsBrowseRoot','SettingsAddRoot','SettingsRemoveRoot','SettingsRebuildRoot','SettingsPause','SettingsChangeDataDirectory','SettingsOcrEnabled','SettingsRetryOcr','SettingsSave')) {
+    foreach ($id in @('SettingsBrowseRoot','SettingsAddRoot','SettingsRemoveRoot','SettingsRebuildRoot','SettingsPause','SettingsChangeDataDirectory','SettingsOcrEnabled','SettingsRetryOcr','SettingsSave','SettingsCopyClaudeMcp','SettingsCopyCodexMcp')) {
         Assert-ControlFits $id $script:settings
     }
+    Invoke-Control 'SettingsCopyClaudeMcp' $script:settings
+    $mcpConfig = Get-Clipboard -Raw | ConvertFrom-Json
+    $mcpPath = $mcpConfig.mcpServers.rustsearch.command
+    if (!(Test-Path -LiteralPath $mcpPath -PathType Leaf) -or [IO.Path]::GetFileName($mcpPath) -ne 'rustsearch-mcp.exe') {
+        throw 'Claude MCP configuration does not reference the packaged executable.'
+    }
+    Invoke-Control 'SettingsCopyCodexMcp' $script:settings
+    $codexConfig = Get-Clipboard -Raw
+    if ($codexConfig -notmatch '\[mcp_servers\.rustsearch\]' -or $codexConfig -notmatch 'rustsearch-mcp\.exe') {
+        throw 'Codex MCP configuration is incomplete.'
+    }
+    Write-Output 'PASS: compact MCP controls and clipboard configurations reference the packaged executable.'
     Select-SettingsSection 'Storage'
     $null = Save-Window $script:settings '06-settings-compact-data.png'
     Reveal-Control (Get-Control 'SettingsAddRoot' $script:settings)

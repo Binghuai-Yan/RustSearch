@@ -2,7 +2,7 @@ name: Windows build and release
 
 on:
   push:
-    branches: [main]
+    branches: [main, mcp]
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
@@ -102,6 +102,12 @@ jobs:
             if ($tagVersion -ne $version) { throw "Tag version $tagVersion does not match VERSION $version" }
           }
           ./build.ps1 -Version $version -SkipTests -SkipUITests
+
+      - name: Verify packaged MCP server
+        if: github.event_name != 'pull_request'
+        env:
+          RUSTSEARCH_DEPENDENCY_CACHE_DIR: ${{ runner.temp }}\RustSearch-Dependencies
+        run: ./scripts/test-mcp.ps1 -Package ./dist/RustSearch
 
       - name: Verify third-party notices
         env:

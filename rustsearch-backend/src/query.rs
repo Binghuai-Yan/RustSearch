@@ -302,12 +302,16 @@ pub fn search(engine: &Engine, mut params: SearchParams) -> Result<SearchResult>
         .find(|(key, g, _)| key == &cache_key && *g == generation)
         .map(|(_, _, r)| r.clone());
     if let Some(mut result) = cached {
-        engine.meta.lock().unwrap().record_query(&params.query)?;
+        if params.record_history {
+            engine.meta.lock().unwrap().record_query(&params.query)?;
+        }
         result.elapsed_ms = started.elapsed().as_millis();
         return Ok(result);
     }
     let query = build_query(engine, &params).map_err(|e| QuerySyntaxError(e.to_string()))?;
-    engine.meta.lock().unwrap().record_query(&params.query)?;
+    if params.record_history {
+        engine.meta.lock().unwrap().record_query(&params.query)?;
+    }
     search_query(
         engine, params, started, offset, cache_key, generation, query,
     )

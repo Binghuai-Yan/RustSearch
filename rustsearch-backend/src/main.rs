@@ -6,6 +6,8 @@ mod ipc;
 mod ocr;
 mod path_utils;
 mod query;
+#[cfg(windows)]
+mod shared;
 mod uninstall;
 mod watcher;
 
@@ -27,6 +29,19 @@ fn main() -> anyhow::Result<()> {
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "warn".into()),
         )
         .init();
+    #[cfg(windows)]
+    if let Some(mode) = std::env::args().nth(1) {
+        if mode == "--serve" || mode == "--connect" {
+            let runtime = tokio::runtime::Runtime::new()?;
+            return runtime.block_on(async {
+                if mode == "--serve" {
+                    shared::serve().await
+                } else {
+                    shared::bridge().await
+                }
+            });
+        }
+    }
     if std::env::args_os()
         .nth(1)
         .is_some_and(|a| a == "--delete-user-index")

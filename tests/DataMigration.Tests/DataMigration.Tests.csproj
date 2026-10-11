@@ -8,5 +8,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\RustSearch.UI\Services\DataDirectoryMigration.cs" Link="DataDirectoryMigration.cs" />
+    <Compile Include="..\..\RustSearch.UI\Services\DataMigrationLease.cs" Link="DataMigrationLease.cs" />
   </ItemGroup>
 </Project>

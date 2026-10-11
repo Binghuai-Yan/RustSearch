@@ -4,7 +4,7 @@ namespace RustSearch.UI.Services;
 
 public sealed record AppStats(int TotalDocs = 0, int FailedDocs = 0, int Roots = 0,
     bool Indexing = false, bool Paused = false, long IndexSizeBytes = 0, string Version = "0.1.0",
-    int OcrPending = 0, int OcrFailed = 0);
+    int OcrPending = 0, int OcrFailed = 0, int ActiveClients = 0, int? EnginePid = null);
 public sealed record IndexedRoot(string Path, long AddedAt = 0, int TotalDocs = 0);
 public sealed record RootsResult(List<IndexedRoot> Roots);
 public sealed record SearchResponse(long TotalHits, long ElapsedMs, List<SearchHit> Hits, int Page = 0, int PageSize = 50);

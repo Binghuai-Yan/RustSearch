@@ -31,6 +31,21 @@ await Run("Verified copy preserves binary index, SQLite, dictionary and preferen
     Check((File.GetAttributes(Path.Combine(destination, "index", ".managed.json")) & FileAttributes.Hidden) != 0, "Hidden index file attribute lost");
 });
 
+await Run("Active migration lease is excluded from copying and remains exclusive", async fixture =>
+{
+    var source = fixture.PathFor("source");
+    var destination = fixture.PathFor("destination");
+    Seed(source);
+    using (var lease = new DataMigrationLease(source))
+    {
+        await Throws<IOException>(() => Task.Run(() => { using var other = new DataMigrationLease(source); }));
+        await DataDirectoryMigration.CopyAsync(source, destination);
+        Check(!File.Exists(Path.Combine(destination, ".migration.lock")), "Live lease was copied into destination");
+        Check(File.Exists(Path.Combine(destination, "meta.db")), "Index metadata was not copied");
+    }
+    Check(!File.Exists(Path.Combine(source, ".migration.lock")), "Lease was not removed after disposal");
+});
+
 await Run("Verified migration removes managed source data but keeps unrelated files", async fixture =>
 {
     var source = fixture.PathFor("source");
