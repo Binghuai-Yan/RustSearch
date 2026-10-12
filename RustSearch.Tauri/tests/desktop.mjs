@@ -33,6 +33,12 @@ const appEnv = { ...process.env, RUSTSEARCH_DATA_DIR: data,
   WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port} --remote-debugging-address=127.0.0.1` };
 // Exercise discovery of the bundled Backend directory from an unrelated cwd.
 delete appEnv.RUSTSEARCH_BACKEND_PATH;
+const ciPolicy = process.env.GITHUB_ACTIONS === 'true';
+const setWebViewPolicy = (action) => execFileSync('pwsh.exe', ['-NoProfile', '-NonInteractive',
+  '-ExecutionPolicy', 'Bypass', '-File', join(frontend, 'tests/webview-policy.ps1'), '-Action', action,
+  '-Executable', executable, '-StateFile', join(temporary, 'webview-policy.json')],
+  { encoding: 'utf8', windowsHide: true, timeout: 30000, env: appEnv });
+if (ciPolicy) console.log(setWebViewPolicy('Apply').trim());
 const app = spawn(executable, [], { cwd: tmpdir(), windowsHide: true, env: appEnv });
 let stderr = '', stdout = '', connectionError = '';
 app.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
@@ -294,5 +300,6 @@ try {
   if (browser) await browser.close().catch(() => {});
   app.kill();
   peer?.stdin.end();
+  if (ciPolicy) setWebViewPolicy('Restore');
   console.log(`Isolated fixtures retained: ${temporary}`);
 }
