@@ -259,12 +259,21 @@ jobs:
             }
           }
           $runtime = Find-WebViewRuntime | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-          if (-not $runtime) {
-            choco install webview2-runtime --yes --no-progress
-            if ($LASTEXITCODE -ne 0) { throw 'WebView2 runtime installation failed' }
+          # Runtime 153 has a reported CDP regression (WebView2Feedback#5718).
+          # Use a current runtime for desktop automation, as on developer machines.
+          if (-not $runtime -or [version]$runtime.VersionInfo.ProductVersion -lt [version]'154.0') {
+            $installer = Join-Path $env:RUNNER_TEMP 'RustSearch-WebView2RuntimeInstallerX64.exe'
+            Invoke-WebRequest 'https://go.microsoft.com/fwlink/p/?LinkId=2124701' -OutFile $installer
+            $signature = Get-AuthenticodeSignature -LiteralPath $installer
+            if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
+              throw 'WebView2 installer signature is invalid'
+            }
+            $install = Start-Process -FilePath $installer -ArgumentList '/silent','/install' -WindowStyle Hidden -Wait -PassThru
+            if ($install.ExitCode -notin @(0,3010)) { throw "WebView2 runtime installation failed: $($install.ExitCode)" }
             $runtime = Find-WebViewRuntime | Sort-Object LastWriteTime -Descending | Select-Object -First 1
           }
           if (-not $runtime) { throw 'WebView2 runtime executable is unavailable' }
+          if ([version]$runtime.VersionInfo.ProductVersion -lt [version]'154.0') { throw 'Desktop tests require WebView2 154 or newer' }
           "WEBVIEW2_BROWSER_EXECUTABLE_FOLDER=$($runtime.DirectoryName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Output "WebView2 runtime: $($runtime.FullName) ($($runtime.VersionInfo.ProductVersion))"
 

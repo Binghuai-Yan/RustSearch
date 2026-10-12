@@ -153,7 +153,7 @@ try {
   const peerStats = await peerCall('app.stats');
   expect(peerStats.engine_pid).toBe((await invoke('app.stats')).engine_pid);
   expect(peerStats.active_clients).toBe(2);
-  const bridgePid = Number(execFileSync('powershell.exe', ['-NoProfile', '-Command',
+  const bridgePid = Number(execFileSync('pwsh.exe', ['-NoProfile', '-NonInteractive', '-Command',
     `Get-CimInstance Win32_Process -Filter 'ParentProcessId = ${app.pid}' | Where-Object Name -eq 'rustsearch-backend.exe' | Select-Object -ExpandProperty ProcessId`,
   ], { encoding: 'utf8', windowsHide: true }).trim());
   expect(bridgePid).toBeGreaterThan(0);
@@ -162,7 +162,7 @@ try {
   await page.locator('.engine-card').getByRole('button', { name: '重新连接', exact: true }).click();
   await expect(page.locator('.engine-label')).toContainText('索引已就绪');
   expect((await peerCall('app.stats')).engine_pid).toBe(peerStats.engine_pid);
-  const reconnectedBridge = Number(execFileSync('powershell.exe', ['-NoProfile', '-Command',
+  const reconnectedBridge = Number(execFileSync('pwsh.exe', ['-NoProfile', '-NonInteractive', '-Command',
     `Get-CimInstance Win32_Process -Filter 'ParentProcessId = ${app.pid}' | Where-Object Name -eq 'rustsearch-backend.exe' | Select-Object -ExpandProperty ProcessId`,
   ], { encoding: 'utf8', windowsHide: true }).trim());
   process.kill(reconnectedBridge);
@@ -250,7 +250,7 @@ try {
   expect(failures).toEqual([]);
   // Process.MainWindowHandle may return Tauri's auxiliary tray window.
   // Probe the actual main window by process ID and its configured title.
-  const windowAction = (action) => execFileSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass',
+  const windowAction = (action) => execFileSync('pwsh.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
     '-File', join(frontend, 'tests/window.ps1'), '-ApplicationPid', String(app.pid), '-Action', action],
     { encoding: 'utf8', windowsHide: true }).trim();
   windowAction('Close');
